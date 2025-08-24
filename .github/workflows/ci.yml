@@ -37,9 +37,15 @@ jobs:
       - name: Configure JFrog URL
         run: |
           jf c add --interactive=false --url "${{ vars.JFROG_URL }}" --access-token ""
+          jf c show
 
-      - name: Push Docker image (placeholder)
+      - name: Docker login to JFrog registry
         run: |
-          echo "(placeholder) docker push ${{ vars.DOCKER_REGISTRY }}/..."
+          jf docker login "${{ vars.DOCKER_REGISTRY }}"
+
+      - name: Push Docker image
+        run: |
+          IMAGE=${{ vars.PROJECT_KEY }}-web-docker-internal-local/web:$(echo $GITHUB_SHA | head -c7)
+          docker push ${{ vars.DOCKER_REGISTRY }}/$IMAGE
 
 

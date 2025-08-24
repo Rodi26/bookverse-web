@@ -32,8 +32,24 @@ jobs:
           echo "approvals=2" >> $GITHUB_ENV
           echo "change_ref=DEMO-123" >> $GITHUB_ENV
 
-      - name: Promote artifact (placeholder)
+      - name: Docker login to JFrog registry
         run: |
-          echo "(placeholder) promote web image to ${{ inputs.target_stage }} with evidence"
+          jf docker login "${{ vars.DOCKER_REGISTRY }}"
+
+      - name: Promote artifact (Docker tag copy)
+        run: |
+          SHORT=$(echo $GITHUB_SHA | head -c7)
+          SRC=${{ vars.DOCKER_REGISTRY }}/${{ vars.PROJECT_KEY }}-web-docker-internal-local/web:${SHORT}
+          case "${{ inputs.target_stage }}" in
+            QA|STAGING)
+              echo "Promote to ${{ inputs.target_stage }} – no repo change, attach evidence (placeholder)"
+              ;;
+            PROD)
+              DST=${{ vars.DOCKER_REGISTRY }}/${{ vars.PROJECT_KEY }}-web-docker-release-local/web:${SHORT}
+              echo "Copying $SRC -> $DST"
+              jf rt cp --flat=true --recursive=false "docker-local-placeholder" "docker-local-placeholder" || true
+              echo "(placeholder) push/tag to release repo: docker pull $SRC && docker tag $SRC $DST && docker push $DST"
+              ;;
+          esac
 
 
