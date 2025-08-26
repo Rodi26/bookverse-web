@@ -37,14 +37,6 @@ jobs:
           npm ci || npm install
           npm run build
 
-      - name: Generate SBOM (placeholder)
-        run: |
-          echo "(placeholder) syft packages dir=./ --output cyclonedx-json=sbom.json"
-
-      - name: Sign artifacts (placeholder)
-        run: |
-          echo "(placeholder) cosign sign --key env://COSIGN_KEY $GITHUB_SHA"
-
       - name: Build Docker image (web)
         run: |
           IMAGE=${{ vars.PROJECT_KEY }}-web-docker-internal-local/web:$(echo $GITHUB_SHA | head -c7)
@@ -58,19 +50,4 @@ jobs:
         run: |
           IMAGE=${{ vars.PROJECT_KEY }}-web-docker-internal-local/web:$(echo $GITHUB_SHA | head -c7)
           docker push ${{ vars.DOCKER_REGISTRY }}/$IMAGE
-
-      - name: Publish Build Info
-        if: always()
-        run: |
-          echo "📊 Publishing build info for Web Service CI"
-          jf rt build-publish
-          echo "✅ Build info published successfully"
-
-      - name: Build Info Summary
-        if: always()
-        run: |
-          echo "📋 Web Service CI Complete"
-          echo "   Build Name: ${JFROG_CLI_BUILD_NAME:-'Web-CI'}"
-          echo "   Build Number: ${JFROG_CLI_BUILD_NUMBER:-${{ github.run_number }}}"
-          echo "   All CI actions captured in JFrog build info"
 
