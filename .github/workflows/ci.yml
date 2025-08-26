@@ -27,6 +27,14 @@ jobs:
           npm ci || npm install
           npm run build
 
+      - name: Generate SBOM (placeholder)
+        run: |
+          echo "(placeholder) syft packages dir=./ --output cyclonedx-json=sbom.json"
+
+      - name: Sign artifacts (placeholder)
+        run: |
+          echo "(placeholder) cosign sign --key env://COSIGN_KEY $GITHUB_SHA"
+
       - name: Build Docker image (web)
         run: |
           IMAGE=${{ vars.PROJECT_KEY }}-web-docker-internal-local/web:$(echo $GITHUB_SHA | head -c7)

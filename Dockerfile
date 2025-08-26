@@ -11,6 +11,9 @@ FROM nginx:1.27-alpine
 COPY nginx.conf /etc/nginx/nginx.conf
 COPY --from=builder /app/dist /usr/share/nginx/html
 EXPOSE 8080
-CMD ["nginx", "-g", "daemon off;"]
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+ENV BOOKVERSE_ENV=DEV
+ENTRYPOINT ["/entrypoint.sh"]
 
 
