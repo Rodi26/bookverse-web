@@ -27,11 +27,6 @@ jobs:
           jf c add --interactive=false --url "${{ vars.JFROG_URL }}" --access-token ""
           jf c show
 
-      - name: Start Build Info Collection
-        run: |
-          echo "🔄 Starting build info collection for Web Service CI"
-          jf rt build-start
-
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
