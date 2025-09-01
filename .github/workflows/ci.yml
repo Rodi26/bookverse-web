@@ -18,14 +18,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup JFrog CLI (optional)
-        if: ${{ vars.JFROG_URL != '' && secrets.JFROG_ACCESS_TOKEN != '' }}
+      - name: Setup JFrog CLI
         uses: jfrog/setup-jfrog-cli@v4
         with:
           version: latest
 
       - name: Configure JFrog CLI
-        if: ${{ vars.JFROG_URL != '' && secrets.JFROG_ACCESS_TOKEN != '' }}
         run: |
           jf c add --interactive=false --url "${{ vars.JFROG_URL }}" --access-token "${{ secrets.JFROG_ACCESS_TOKEN }}"
 
@@ -59,7 +57,6 @@ jobs:
           echo "BUILD_NUMBER=$IMAGE_TAG" >> $GITHUB_ENV
 
       - name: Build and push prod image via JFrog CLI
-        if: ${{ vars.JFROG_URL != '' && secrets.JFROG_ACCESS_TOKEN != '' && vars.PROJECT_KEY != '' }}
         run: |
           WEB_IMAGE=$REGISTRY_URL/${{ vars.PROJECT_KEY }}-${{ env.SERVICE_NAME }}-docker-internal-local/web:${IMAGE_TAG}
           jf docker build --pull -t $WEB_IMAGE --build-arg BUILD_MODE=prod -f Dockerfile .
@@ -67,7 +64,6 @@ jobs:
             --build-name=${{ env.BUILD_NAME }} --build-number=${{ env.BUILD_NUMBER }}
 
       - name: Build and push debug image via JFrog CLI
-        if: ${{ vars.JFROG_URL != '' && secrets.JFROG_ACCESS_TOKEN != '' && vars.PROJECT_KEY != '' }}
         run: |
           WEB_IMAGE_DEBUG=$REGISTRY_URL/${{ vars.PROJECT_KEY }}-${{ env.SERVICE_NAME }}-docker-internal-local/web-debug:${IMAGE_TAG}
           jf docker build --pull -t $WEB_IMAGE_DEBUG --build-arg BUILD_MODE=debug -f Dockerfile .
@@ -104,7 +100,6 @@ jobs:
           EOF
 
       - name: Attach coverage evidence to images
-        if: ${{ vars.JFROG_URL != '' && secrets.EVIDENCE_PRIVATE_KEY != '' && vars.PROJECT_KEY != '' }}
         run: |
           jf evd create-evidence \
             --predicate coverage-evidence.json \
@@ -119,7 +114,6 @@ jobs:
   create-application-version:
     needs: build-test-publish
     runs-on: ubuntu-latest
-    if: ${{ vars.JFROG_URL != '' && secrets.JFROG_ACCESS_TOKEN != '' }}
     permissions:
       contents: read
       id-token: write
