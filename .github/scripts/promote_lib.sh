@@ -94,7 +94,7 @@ promote_to_stage() {
 release_version() {
   local resp_body http_status; resp_body=$(mktemp)
   echo "🚀 Releasing to ${FINAL_STAGE} via AppTrust Release API"
-  local payload; payload='{"promotion_type":"copy"}'
+  local payload; payload='{"promotion_type":"move"}'
   http_status=$(curl -sS -L -o "$resp_body" -w "%{http_code}" -X POST \
     "${JFROG_URL}/apptrust/api/v1/applications/${APPLICATION_KEY}/versions/${APP_VERSION}/release?async=false" \
     -H "Authorization: Bearer ${JFROG_ADMIN_TOKEN}" \
