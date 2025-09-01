@@ -4,10 +4,10 @@ on:
   workflow_dispatch:
     inputs:
       target_stage:
-        description: 'Target stage (QA, STAGING, PROD)'
+        description: 'Target stage (DEV, QA, STAGING, PROD)'
         required: true
         type: choice
-        options: [ QA, STAGING, PROD ]
+        options: [ DEV, QA, STAGING, PROD ]
 
 jobs:
   promote:
@@ -19,23 +19,77 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: JFrog OIDC login (optional)
-        if: ${{ vars.JFROG_URL != '' }}
+      - name: Setup JFrog CLI
         uses: jfrog/setup-jfrog-cli@v4
+        env:
+          JF_URL: ${{ vars.JFROG_URL }}
+          JF_PROJECT: ${{ vars.PROJECT_KEY }}
+        with:
+          version: latest
+          disable-job-summary: true
 
       - name: Configure JFrog URL
-        if: ${{ vars.JFROG_URL != '' }}
         run: |
-          jf c add --interactive=false --url "${{ vars.JFROG_URL }}" --access-token ""
+          jf c add --interactive=false --url "${{ vars.JFROG_URL }}" --access-token "${{ secrets.JFROG_ACCESS_TOKEN }}"
 
-      - name: Attach promotion evidence (synthetic)
+      - name: Initialize promotion context
         run: |
-          echo "qa_summary=All critical tests passed" >> $GITHUB_ENV
-          echo "approvals=2" >> $GITHUB_ENV
-          echo "change_ref=DEMO-123" >> $GITHUB_ENV
+          set -euo pipefail
+          SERVICE_NAME=$(echo ${{ github.event.repository.name }} | sed 's/bookverse-//')
+          APPLICATION_KEY="bookverse-$SERVICE_NAME"
+          TARGET_STAGE=${{ inputs.target_stage }}
+          echo "APPLICATION_KEY=$APPLICATION_KEY" >> $GITHUB_ENV
+          echo "TARGET_STAGE=$TARGET_STAGE" >> $GITHUB_ENV
+          echo "🔎 Fetching latest application version for $APPLICATION_KEY"
+          RESP_FILE=$(mktemp)
+          HTTP_STATUS=$(curl -sS -L -o "$RESP_FILE" -w "%{http_code}" \
+            "${{ vars.JFROG_URL }}/apptrust/api/v1/applications/$APPLICATION_KEY/versions?limit=1&order_by=created&order_asc=false" \
+            -H "Authorization: Bearer ${{ secrets.JFROG_ACCESS_TOKEN }}" \
+            -H "Accept: application/json")
+          if [[ "$HTTP_STATUS" -ge 200 && "$HTTP_STATUS" -lt 300 ]]; then
+            if LATEST_VERSION=$(jq -er '.versions[0].version // empty' "$RESP_FILE" 2>/dev/null); then
+              echo "APP_VERSION=$LATEST_VERSION" >> $GITHUB_ENV
+            fi
+          fi
+          rm -f "$RESP_FILE"
+          if [[ -z "${APP_VERSION:-}" ]]; then echo "❌ Could not determine latest application version for $APPLICATION_KEY" >&2; exit 1; fi
 
-      - name: Promote artifact (placeholder)
+      - name: Initialize lifecycle and stages
         run: |
-          echo "Promote to ${{ inputs.target_stage }} (placeholder)"
+          set -euo pipefail
+          export JFROG_URL="${{ vars.JFROG_URL }}"; export PROJECT_KEY="${{ vars.PROJECT_KEY }}"; export JFROG_ADMIN_TOKEN="${{ secrets.JFROG_ACCESS_TOKEN }}"
+          source .github/scripts/promote_lib.sh
+          LC_FILE=$(mktemp)
+          CODE=$(curl -sS -L -o "$LC_FILE" -w "%{http_code}" "$JFROG_URL/access/api/v2/lifecycle/?project_key=$PROJECT_KEY" -H "Authorization: Bearer $JFROG_ADMIN_TOKEN" -H "Accept: application/json" || echo 000)
+          if [[ "$CODE" -lt 200 || "$CODE" -ge 300 ]]; then echo "Failed to fetch lifecycle (HTTP $CODE)" >&2; cat "$LC_FILE" || true; exit 1; fi
+          NORM_FILE=$(mktemp)
+          jq -c 'if type=="array" then . elif has("lifecycles") then .lifecycles elif has("items") then .items elif has("results") then .results elif (has("name") and has("stages")) then [.] else [] end' "$LC_FILE" > "$NORM_FILE" 2>/dev/null || printf '[]' > "$NORM_FILE"
+          rm -f "$LC_FILE"
+          LIFECYCLE_NAME="${LIFECYCLE_NAME:-bookverse-lifecycle}"
+          NAMES=$(jq -r --arg n "$LIFECYCLE_NAME" 'map(select(.name == $n)) | .[0].stages // [] | map(if type=="object" then .name else . end) | .[]' "$NORM_FILE" 2>/dev/null || true)
+          RELEASE_STAGE=$(jq -r --arg n "$LIFECYCLE_NAME" '([ .[] | select(.name == $n) | .releaseStage ] | .[0]) // empty' "$NORM_FILE" 2>/dev/null || true)
+          STAGES=(); while IFS= read -r orig; do [[ -z "$orig" ]] && continue; display=$(display_stage_for "$orig"); STAGES+=("$display"); done < <(printf "%s\n" "$NAMES")
+          rm -f "$NORM_FILE"
+          if [[ ${#STAGES[@]} -eq 0 ]]; then STAGES=(DEV QA STAGING PROD); fi
+          if [[ -n "$RELEASE_STAGE" ]]; then FINAL_STAGE=$(display_stage_for "$RELEASE_STAGE"); else FINAL_STAGE="${STAGES[$((${#STAGES[@]}-1))]}"; fi
+          echo "FINAL_STAGE=$FINAL_STAGE" >> $GITHUB_ENV
+          STAGES_STR="${STAGES[*]}"; echo "STAGES_STR=$STAGES_STR" >> $GITHUB_ENV
+          TS_INPUT="${{ inputs.target_stage }}"; TARGET_NAME="$TS_INPUT"; if [[ -z "$TARGET_NAME" ]]; then TARGET_NAME="$FINAL_STAGE"; fi
+          echo "TARGET_NAME=$TARGET_NAME" >> $GITHUB_ENV
+
+      - name: Promote through stages
+        env:
+          EVIDENCE_PRIVATE_KEY: ${{ secrets.EVIDENCE_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          export JFROG_URL="${{ vars.JFROG_URL }}"; export PROJECT_KEY="${{ vars.PROJECT_KEY }}"; export JFROG_ADMIN_TOKEN="${{ secrets.JFROG_ACCESS_TOKEN }}"; source .github/scripts/promote_lib.sh
+          fetch_summary
+          ALLOW_RELEASE=false
+          advance_one_step
+          fetch_summary
+          if [[ "$(display_stage_for "${CURRENT_STAGE:-}")" == "STAGING" && "$TARGET_NAME" == "PROD" ]]; then
+            ALLOW_RELEASE=true
+            advance_one_step
+          fi
 
 
