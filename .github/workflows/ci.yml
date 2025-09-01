@@ -18,16 +18,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup JFrog CLI
+      - name: Setup JFrog CLI (OIDC)
         uses: jfrog/setup-jfrog-cli@v4
+        env:
+          JF_URL: ${{ vars.JFROG_URL }}
+          JF_PROJECT: ${{ vars.PROJECT_KEY }}
         with:
           version: latest
-
-      - name: Configure JFrog CLI
-        run: |
-          jf c add --interactive=false --url "${{ vars.JFROG_URL }}" --access-token "${{ secrets.JFROG_ADMIN_TOKEN }}" --project "${{ vars.PROJECT_KEY }}"
-          jf c show
-          jf rt ping
+          oidc-provider-name: github-bookverse-inventory
+          oidc-audience: jfrog-github
+          disable-job-summary: false
+          disable-auto-build-publish: false
+          disable-auto-evidence-collection: false
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -51,26 +53,32 @@ jobs:
         run: |
           SERVICE_NAME=$(echo ${{ github.event.repository.name }} | sed 's/bookverse-//')
           IMAGE_TAG=$(echo $GITHUB_SHA | head -c7)
-          REGISTRY_URL=$(echo "${{ vars.JFROG_URL }}" | sed 's|https://||' | sed 's|http://||')
+          REGISTRY_URL="${{ vars.DOCKER_REGISTRY }}"
           echo "SERVICE_NAME=$SERVICE_NAME" >> $GITHUB_ENV
           echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
           echo "REGISTRY_URL=$REGISTRY_URL" >> $GITHUB_ENV
           echo "BUILD_NAME=$SERVICE_NAME" >> $GITHUB_ENV
           echo "BUILD_NUMBER=$IMAGE_TAG" >> $GITHUB_ENV
 
-      - name: Build and push prod image via JFrog CLI
+      - name: Ping Artifactory (OIDC)
+        run: |
+          jf rt ping
+
+      - name: Build and push prod image via JFrog CLI (OIDC)
         run: |
           WEB_IMAGE=$REGISTRY_URL/${{ vars.PROJECT_KEY }}-${{ env.SERVICE_NAME }}-docker-internal-local/web:${IMAGE_TAG}
-          jf docker build --pull -t $WEB_IMAGE --build-arg BUILD_MODE=prod -f Dockerfile .
-          jf rt dp $WEB_IMAGE ${{ vars.PROJECT_KEY }}-${{ env.SERVICE_NAME }}-docker-internal-local \
-            --build-name=${{ env.BUILD_NAME }} --build-number=${{ env.BUILD_NUMBER }}
+          jf docker build --pull -t "$WEB_IMAGE" --build-arg BUILD_MODE=prod -f Dockerfile .
+          jf docker push "$WEB_IMAGE" --build-name "${{ env.BUILD_NAME }}" --build-number "${{ env.BUILD_NUMBER }}"
+          jf rt dp "$WEB_IMAGE" "${{ vars.PROJECT_KEY }}-${{ env.SERVICE_NAME }}-docker-internal-local" \
+            --build-name "${{ env.BUILD_NAME }}" --build-number "${{ env.BUILD_NUMBER }}"
 
-      - name: Build and push debug image via JFrog CLI
+      - name: Build and push debug image via JFrog CLI (OIDC)
         run: |
           WEB_IMAGE_DEBUG=$REGISTRY_URL/${{ vars.PROJECT_KEY }}-${{ env.SERVICE_NAME }}-docker-internal-local/web-debug:${IMAGE_TAG}
-          jf docker build --pull -t $WEB_IMAGE_DEBUG --build-arg BUILD_MODE=debug -f Dockerfile .
-          jf rt dp $WEB_IMAGE_DEBUG ${{ vars.PROJECT_KEY }}-${{ env.SERVICE_NAME }}-docker-internal-local \
-            --build-name=${{ env.BUILD_NAME }} --build-number=${{ env.BUILD_NUMBER }}
+          jf docker build --pull -t "$WEB_IMAGE_DEBUG" --build-arg BUILD_MODE=debug -f Dockerfile .
+          jf docker push "$WEB_IMAGE_DEBUG" --build-name "${{ env.BUILD_NAME }}" --build-number "${{ env.BUILD_NUMBER }}"
+          jf rt dp "$WEB_IMAGE_DEBUG" "${{ vars.PROJECT_KEY }}-${{ env.SERVICE_NAME }}-docker-internal-local" \
+            --build-name "${{ env.BUILD_NAME }}" --build-number "${{ env.BUILD_NUMBER }}"
 
       - name: Package static bundles
         run: |
