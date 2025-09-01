@@ -19,47 +19,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: JFrog OIDC login
+      - name: JFrog OIDC login (optional)
+        if: ${{ vars.JFROG_URL != '' }}
         uses: jfrog/setup-jfrog-cli@v4
 
       - name: Configure JFrog URL
-        run: |
-          jf c add --interactive=false --url "${{ vars.JFROG_URL }}" --access-token ""
-
-      - name: Attach promotion evidence (synthetic)
-        run: |
-          echo "qa_summary=Web smoke tests passed" >> $GITHUB_ENV
-          echo "approvals=2" >> $GITHUB_ENV
-          echo "change_ref=WEB-DEM0" >> $GITHUB_ENV
-
-      - name: Promote artifact (placeholder)
-        run: |
-          echo "(placeholder) promote web images to ${{ inputs.target_stage }} with evidence"
-name: Promote
-
-on:
-  workflow_dispatch:
-    inputs:
-      target_stage:
-        description: 'Target stage (QA, STAGING, PROD)'
-        required: true
-        type: choice
-        options: [ QA, STAGING, PROD ]
-
-jobs:
-  promote:
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: JFrog OIDC login
-        uses: jfrog/setup-jfrog-cli@v4
-
-      - name: Configure JFrog URL
+        if: ${{ vars.JFROG_URL != '' }}
         run: |
           jf c add --interactive=false --url "${{ vars.JFROG_URL }}" --access-token ""
 
@@ -69,24 +34,8 @@ jobs:
           echo "approvals=2" >> $GITHUB_ENV
           echo "change_ref=DEMO-123" >> $GITHUB_ENV
 
-      - name: Docker login to JFrog registry
+      - name: Promote artifact (placeholder)
         run: |
-          jf docker login "${{ vars.DOCKER_REGISTRY }}"
-
-      - name: Promote artifact (Docker tag copy)
-        run: |
-          SHORT=$(echo $GITHUB_SHA | head -c7)
-          SRC=${{ vars.DOCKER_REGISTRY }}/${{ vars.PROJECT_KEY }}-web-docker-internal-local/web:${SHORT}
-          case "${{ inputs.target_stage }}" in
-            QA|STAGING)
-              echo "Promote to ${{ inputs.target_stage }} – no repo change, attach evidence (placeholder)"
-              ;;
-            PROD)
-              DST=${{ vars.DOCKER_REGISTRY }}/${{ vars.PROJECT_KEY }}-web-docker-release-local/web:${SHORT}
-              echo "Copying $SRC -> $DST"
-              jf rt cp --flat=true --recursive=false "docker-local-placeholder" "docker-local-placeholder" || true
-              echo "(placeholder) push/tag to release repo: docker pull $SRC && docker tag $SRC $DST && docker push $DST"
-              ;;
-          esac
+          echo "Promote to ${{ inputs.target_stage }} (placeholder)"
 
 
