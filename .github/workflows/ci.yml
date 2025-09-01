@@ -131,12 +131,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup JFrog CLI
+      - name: Setup JFrog CLI (OIDC)
         uses: jfrog/setup-jfrog-cli@v4
+        env:
+          JF_URL: ${{ vars.JFROG_URL }}
+          JF_PROJECT: ${{ vars.PROJECT_KEY }}
+        with:
+          version: latest
+          oidc-provider-name: github-bookverse-inventory
+          oidc-audience: jfrog-github
+          disable-job-summary: false
+          disable-auto-build-publish: false
+          disable-auto-evidence-collection: false
 
-      - name: Configure JFrog CLI
+      - name: Verify JFrog connectivity (OIDC)
         run: |
-          jf c add --interactive=false --url "${{ vars.JFROG_URL }}" --access-token "${{ secrets.JFROG_ADMIN_TOKEN }}" --project "${{ vars.PROJECT_KEY }}"
           jf rt ping
 
       - name: Determine application version and variables
@@ -164,7 +173,7 @@ jobs:
           EOF
           )
           curl -X POST "${{ vars.JFROG_URL }}/apptrust/api/v1/applications/${{ env.APPLICATION_KEY }}/versions/" \
-            -H "Authorization: Bearer ${{ secrets.JFROG_ACCESS_TOKEN }}" \
+            -H "Authorization: Bearer ${{ secrets.JFROG_ADMIN_TOKEN }}" \
             -H "Content-Type: application/json" -d "$APP_VERSION_PAYLOAD" --fail-with-body || echo "Application version may already exist"
 
       - name: Attach SDLC evidence to application version
