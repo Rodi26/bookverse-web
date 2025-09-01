@@ -25,8 +25,9 @@ jobs:
 
       - name: Configure JFrog CLI
         run: |
-          jf c add --interactive=false --url "${{ vars.JFROG_URL }}" --access-token "${{ secrets.JFROG_ADMIN_TOKEN }}"
+          jf c add --interactive=false --url "${{ vars.JFROG_URL }}" --access-token "${{ secrets.JFROG_ADMIN_TOKEN }}" --project "${{ vars.PROJECT_KEY }}"
           jf c show
+          jf rt ping
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -127,7 +128,8 @@ jobs:
 
       - name: Configure JFrog CLI
         run: |
-          jf c add --interactive=false --url "${{ vars.JFROG_URL }}" --access-token "${{ secrets.JFROG_ADMIN_TOKEN }}"
+          jf c add --interactive=false --url "${{ vars.JFROG_URL }}" --access-token "${{ secrets.JFROG_ADMIN_TOKEN }}" --project "${{ vars.PROJECT_KEY }}"
+          jf rt ping
 
       - name: Determine application version and variables
         run: |
