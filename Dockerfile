@@ -4,7 +4,8 @@ WORKDIR /app
 COPY package.json package-lock.json* yarn.lock* pnpm-lock.yaml* ./
 RUN npm ci || npm install
 COPY . .
-RUN npm run build
+ARG BUILD_MODE=prod
+RUN if [ "$BUILD_MODE" = "debug" ]; then npm run build:debug; else npm run build; fi
 
 # Stage 2: nginx runtime
 FROM nginx:1.27-alpine
