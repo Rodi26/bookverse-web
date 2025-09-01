@@ -122,7 +122,8 @@ jobs:
 
       - name: Build and push prod image via JFrog CLI (OIDC)
         run: |
-          jf docker login "$REGISTRY_URL"
+          SERVER_ID="${SETUP_JFROG_CLI_SERVER_IDS:-setup-jfrog-cli-server}"
+          jf c use "$SERVER_ID" || true
           WEB_IMAGE=$REGISTRY_URL/${{ vars.PROJECT_KEY }}-$SERVICE_NAME-docker-internal-local/web:$IMAGE_TAG
           jf docker build --pull -t "$WEB_IMAGE" --build-arg BUILD_MODE=prod -f Dockerfile --build-name "$BUILD_NAME" --build-number "$BUILD_NUMBER" .
           jf docker push "$WEB_IMAGE" --build-name "$BUILD_NAME" --build-number "$BUILD_NUMBER"
@@ -131,7 +132,8 @@ jobs:
 
       - name: Build and push debug image via JFrog CLI (OIDC)
         run: |
-          jf docker login "$REGISTRY_URL"
+          SERVER_ID="${SETUP_JFROG_CLI_SERVER_IDS:-setup-jfrog-cli-server}"
+          jf c use "$SERVER_ID" || true
           WEB_IMAGE_DEBUG=$REGISTRY_URL/${{ vars.PROJECT_KEY }}-$SERVICE_NAME-docker-internal-local/web-debug:$IMAGE_TAG
           jf docker build --pull -t "$WEB_IMAGE_DEBUG" --build-arg BUILD_MODE=debug -f Dockerfile --build-name "$BUILD_NAME" --build-number "$BUILD_NUMBER" .
           jf docker push "$WEB_IMAGE_DEBUG" --build-name "$BUILD_NAME" --build-number "$BUILD_NUMBER"
