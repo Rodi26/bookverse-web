@@ -7,6 +7,7 @@ on:
         description: 'Target stage (DEV, QA, STAGING, PROD)'
         required: true
         type: choice
+        default: 'PROD'
         options: [ DEV, QA, STAGING, PROD ]
       DEMO_MODE:
         description: 'Enable demo mode (verbose logs, request tracing)'
