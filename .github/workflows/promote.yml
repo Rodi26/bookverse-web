@@ -52,9 +52,9 @@ jobs:
           JF_PROJECT: ${{ vars.PROJECT_KEY }}
         with:
           version: latest
-          oidc-provider-name: github-bookverse-web
+          oidc-provider-name: bookverse-web-github
           disable-job-summary: false
-          oidc-audience: jfrog-github
+          oidc-audience: ${{ vars.JFROG_URL }}
 
       - name: Configure JFrog CLI (admin)
         run: |
