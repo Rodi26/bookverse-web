@@ -29,3 +29,14 @@ docker run -p 8080:8080 \
 ## CI/CD
 - CI builds the site, generates SBOM (placeholder), signs (placeholder), builds image, and pushes to `${PROJECT_KEY}-web-docker-internal-local`.
 - Promote workflow copies/tags to release repo on PROD.
+
+### Required repository variables
+
+- `PROJECT_KEY`: `bookverse`
+- `DOCKER_REGISTRY`: e.g., `releases.jfrog.io`
+- `JFROG_URL`: e.g., `https://releases.jfrog.io`
+
+### Required repository secrets
+
+- `JFROG_ACCESS_TOKEN`: Access token used by CI to interact with JFrog Platform
+- `EVIDENCE_PRIVATE_KEY`: Private key PEM for evidence signing (mandatory)
