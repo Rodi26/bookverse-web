@@ -1,4 +1,4 @@
-name: Promote — AppTrust promotion and evidence for web application version
+name: Promote
 
 env:
   DEMO_MODE: "false"
@@ -25,15 +25,16 @@ on:
 
 jobs:
   promote:
+    name: Promote
     runs-on: ubuntu-latest
     permissions:
       contents: read
       id-token: write
     steps:
-      - name: Checkout
+      - name: "[Setup] Checkout"
         uses: actions/checkout@v4
 
-      - name: Set Build Info (canonical)
+      - name: "[Setup] Build Info"
         if: ${{ inputs.DEMO_MODE == 'true' || env.DEMO_MODE == 'true' }}
         run: |
           BUILD_NAME="${{ github.event.repository.name }}_${{ github.workflow }}_${{ github.job }}"
@@ -41,7 +42,7 @@ jobs:
           echo "BUILD_NAME=$BUILD_NAME" >> $GITHUB_ENV
           echo "BUILD_NUMBER=$BUILD_NUMBER" >> $GITHUB_ENV
 
-      - name: Apply DEMO_MODE settings
+      - name: "[Setup] DEMO_MODE"
         if: ${{ inputs.DEMO_MODE == 'true' || env.DEMO_MODE == 'true' }}
         run: |
           DEMO="${{ inputs.DEMO_MODE || 'false' }}"
@@ -56,13 +57,13 @@ jobs:
             echo "DEMO_MODE disabled"
           fi
 
-      - name: Install prerequisites (jq)
+      - name: "[Setup] Prereqs (jq)"
         if: ${{ inputs.DEMO_MODE == 'true' || env.DEMO_MODE == 'true' }}
         run: |
           sudo apt-get update -y
           sudo apt-get install -y jq
 
-      - name: Setup JFrog CLI
+      - name: "[Setup] JFrog CLI"
         uses: jfrog/setup-jfrog-cli@v4
         env:
           JF_URL: ${{ vars.JFROG_URL }}
@@ -75,7 +76,7 @@ jobs:
           disable-job-summary: false
           oidc-audience: ${{ vars.JFROG_URL }}
 
-      - name: Export common env
+      - name: "[Setup] Export env"
         run: |
           SERVICE_NAME=web
           APPLICATION_KEY="bookverse-$SERVICE_NAME"
@@ -88,7 +89,7 @@ jobs:
           echo "DOCKER_REPO=$DOCKER_REPO" >> $GITHUB_ENV
           echo "GENERIC_REPO=$GENERIC_REPO" >> $GITHUB_ENV
 
-      - name: Determine application and version
+      - name: "[Resolve] App & version"
         id: app
         run: |
           set -euo pipefail
@@ -110,7 +111,7 @@ jobs:
           echo "target_stage=$TARGET_STAGE" >> $GITHUB_OUTPUT
           echo "Resolved: $APPLICATION_KEY@$APP_VERSION → $TARGET_STAGE"
 
-      - name: Initialize AppTrust context
+      - name: "[Setup] AppTrust context"
         run: |
           set -euo pipefail
           export APPLICATION_KEY='${{ steps.app.outputs.application_key }}'
@@ -161,7 +162,7 @@ jobs:
           echo "ℹ️ Lifecycle stages: $STAGES_STR"
           echo "ℹ️ Target: $TARGET_NAME; Final: $FINAL_STAGE"
 
-      - name: Promote from UNASSIGNED → next
+      - name: "[Promote] UNASSIGNED → next"
         env:
           EVIDENCE_PRIVATE_KEY: ${{ secrets.EVIDENCE_PRIVATE_KEY }}
         run: |
@@ -174,7 +175,7 @@ jobs:
           ALLOW_RELEASE=false
           advance_one_step
 
-      - name: Promote iteratively up to target (no release)
+      - name: "[Promote] Iterate to target (no release)"
         env:
           EVIDENCE_PRIVATE_KEY: ${{ secrets.EVIDENCE_PRIVATE_KEY }}
         run: |
@@ -202,7 +203,7 @@ jobs:
             fi
           done
 
-      - name: Release to PROD (AppTrust Release)
+      - name: "[Release] PROD"
         env:
           EVIDENCE_PRIVATE_KEY: ${{ secrets.EVIDENCE_PRIVATE_KEY }}
           EVIDENCE_KEY_ALIAS: ${{ vars.EVIDENCE_KEY_ALIAS }}
@@ -217,7 +218,7 @@ jobs:
             echo "Skipping release: current stage is $(display_stage_for "${CURRENT_STAGE:-UNASSIGNED}")"
           fi
 
-      - name: Attach promotion evidence
+      - name: "[Evidence] Attach promotion"
         env:
           EVIDENCE_PRIVATE_KEY: ${{ secrets.EVIDENCE_PRIVATE_KEY }}
         run: |
@@ -251,7 +252,7 @@ jobs:
             --project "${{ vars.PROJECT_KEY }}" \
             --key "${{ secrets.EVIDENCE_PRIVATE_KEY }}" || echo "⚠️ Promotion evidence attach failed"
 
-      - name: Generate promotion summary
+      - name: "[Summary] Promotion"
         run: |
           echo "## 🚀 AppTrust Promotion Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY

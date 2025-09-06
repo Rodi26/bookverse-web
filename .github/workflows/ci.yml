@@ -1,4 +1,4 @@
-name: CI — Build web assets, Docker image, and publish build-info
+name: CI
 
 env:
   DEMO_MODE: "false"
@@ -22,6 +22,7 @@ on:
 
 jobs:
   build-test-publish:
+    name: CI
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -32,10 +33,10 @@ jobs:
       app_version: ${{ steps.set-app-version.outputs.app_version }}
 
     steps:
-      - name: Checkout
+      - name: "[Setup] Checkout"
         uses: actions/checkout@v4
 
-      - name: Apply DEMO_MODE settings
+      - name: "[Setup] DEMO_MODE"
         run: |
           DEMO="${{ inputs.DEMO_MODE || 'false' }}"
           if [ "$DEMO" = "true" ]; then
@@ -49,7 +50,7 @@ jobs:
             echo "DEMO_MODE disabled"
           fi
 
-      - name: Configure HTTP debug verbosity
+      - name: "[Setup] HTTP debug"
         run: |
           DEMO="${{ inputs.DEMO_MODE || 'false' }}"
           # HTTP_DEBUG_LEVEL: none|basic|verbose (default basic)
@@ -64,7 +65,7 @@ jobs:
               fi ;;
           esac
 
-      - name: Display manual trigger info
+      - name: "[Info] Manual trigger"
         run: |
           DEMO="${{ inputs.DEMO_MODE || 'false' }}"
           echo "🚀 Manual CI trigger initiated"
@@ -73,7 +74,7 @@ jobs:
           echo "👤 Triggered by: ${{ github.actor }}"
           echo "🕐 Timestamp: $(date -u)"
 
-      - name: Set Build Info (canonical)
+      - name: "[Setup] Build Info"
         id: set-build-info
         run: |
           BUILD_NAME="${{ github.event.repository.name }}_${{ github.workflow }}_${{ github.job }}"
@@ -83,7 +84,7 @@ jobs:
           echo "build_name=$BUILD_NAME" >> $GITHUB_OUTPUT
           echo "build_number=$BUILD_NUMBER" >> $GITHUB_OUTPUT
 
-      - name: Set build variables
+      - name: "[Setup] Build variables"
         run: |
           SERVICE_NAME=$(echo ${{ github.event.repository.name }} | sed 's/bookverse-//')
           IMAGE_TAG=$(echo $GITHUB_SHA | head -c7)
@@ -101,7 +102,7 @@ jobs:
           echo "DOCKER_REPO=$DOCKER_REPO" >> $GITHUB_ENV
           echo "GENERIC_REPO=$GENERIC_REPO" >> $GITHUB_ENV
 
-      - name: Determine SemVer image version
+      - name: "[Setup] Determine SemVer"
         id: set-app-version
         run: |
           set -euo pipefail
@@ -195,7 +196,7 @@ jobs:
           echo "BUILD_NAME=$BUILD_NAME" >> $GITHUB_ENV
           echo "BUILD_NUMBER=$BUILD_NUMBER" >> $GITHUB_ENV
 
-      - name: Setup JFrog CLI
+      - name: "[Setup] JFrog CLI"
         uses: jfrog/setup-jfrog-cli@v4
         env:
           JF_URL: ${{ vars.JFROG_URL }}
@@ -210,20 +211,20 @@ jobs:
           disable-auto-evidence-collection: false
           oidc-audience: ${{ vars.JFROG_URL }}
 
-      - name: Set up Node
+      - name: "[Setup] Node"
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Install dependencies
+      - name: "[Build] Install deps"
         run: |
           npm ci --no-audit --fund=false
 
-      - name: Build web assets
+      - name: "[Build] Web assets"
         run: |
           npm run build --if-present
 
-      - name: Package and upload web assets
+      - name: "[Artifacts] Web assets tar"
         run: |
           set -euo pipefail
           mkdir -p dist
@@ -237,7 +238,7 @@ jobs:
           jf rt upload "$TAR_PATH" "$GENERIC_REPO/$SERVICE_NAME/assets/${APP_VERSION:-$IMAGE_TAG}/" --flat=true --build-name "$BUILD_NAME" --build-number "$BUILD_NUMBER"
           echo "✅ Uploaded web assets tarball to generic repo"
 
-      - name: Build and push Docker image via JFrog CLI
+      - name: "[Build] Docker image"
         run: |
           set -euo pipefail
           # Use JFrog CLI to authenticate pushes without requiring docker login
@@ -248,14 +249,14 @@ jobs:
           jf rt dp --project "${{ vars.PROJECT_KEY }}" "$IMAGE_NAME" "$DOCKER_REPO" --build-name="$BUILD_NAME" --build-number="$BUILD_NUMBER"
           echo "✅ Built and pushed Docker image (with build-info)"
 
-      - name: Publish Build Info
+      - name: "[Build Info] Publish"
         run: |
           jf rt bag --project "${{ vars.PROJECT_KEY }}" "$BUILD_NAME" "$BUILD_NUMBER"
           jf rt bce --project "${{ vars.PROJECT_KEY }}" "$BUILD_NAME" "$BUILD_NUMBER"
           jf rt bp --project "${{ vars.PROJECT_KEY }}" "$BUILD_NAME" "$BUILD_NUMBER"
 
       # Evidence Plan: Build subject – code-quality (UI)
-      - name: Prepare UI quality gate template (code-quality)
+      - name: "[Evidence] Prepare quality gate"
         run: |
           set -euo pipefail
           echo "📄 Preparing UI quality gate template"
@@ -275,7 +276,7 @@ jobs:
           * **Checked At (UTC)**: `${NOW_TS}`
           EOF
 
-      - name: Populate UI quality gate and attach (code-quality)
+      - name: "[Evidence] Attach quality gate"
         env:
           EVIDENCE_PRIVATE_KEY: ${{ secrets.EVIDENCE_PRIVATE_KEY }}
         run: |
@@ -303,7 +304,7 @@ jobs:
             --key "${{ secrets.EVIDENCE_PRIVATE_KEY }}" || echo "⚠️ UI quality gate evidence attachment failed"
 
       # Evidence Plan: Build subject – license-compliance (FOSSA)
-      - name: Prepare FOSSA license compliance template (license-compliance)
+      - name: "[Evidence] Prepare license template"
         run: |
           set -euo pipefail
           echo "📄 Preparing license compliance template"
@@ -323,7 +324,7 @@ jobs:
           * **Checked At (UTC)**: `${NOW_TS}`
           EOF
 
-      - name: Populate license template and attach (license-compliance)
+      - name: "[Evidence] Attach license compliance"
         env:
           EVIDENCE_PRIVATE_KEY: ${{ secrets.EVIDENCE_PRIVATE_KEY }}
         run: |
@@ -351,6 +352,7 @@ jobs:
             --key "${{ secrets.EVIDENCE_PRIVATE_KEY }}" || echo "⚠️ License compliance evidence attachment failed"
 
   create-application-version:
+    name: Create Version
     needs: build-test-publish
     runs-on: ubuntu-latest
     permissions:
@@ -361,10 +363,10 @@ jobs:
       JFROG_CLI_SIGNING_KEY: ${{ secrets.EVIDENCE_PRIVATE_KEY }}
 
     steps:
-      - name: Checkout
+      - name: "[Setup] Checkout"
         uses: actions/checkout@v4
 
-      - name: Setup JFrog CLI
+      - name: "[Setup] JFrog CLI"
         uses: jfrog/setup-jfrog-cli@v4
         env:
           JF_URL: ${{ vars.JFROG_URL }}
@@ -379,13 +381,13 @@ jobs:
           disable-auto-evidence-collection: true
           oidc-audience: ${{ vars.JFROG_URL }}
 
-      - name: Configure JFrog CLI
+      - name: "[Setup] JFrog config"
         run: |
           jf c add bookverse-admin --interactive=false --url "${{ vars.JFROG_URL }}" --access-token "${{ secrets.JFROG_ADMIN_TOKEN }}"
           jf c use bookverse-admin
           jf c show
 
-      - name: Set AppTrust variables and determine version
+      - name: "[Setup] AppTrust variables"
         run: |
           SERVICE_NAME=$(echo ${{ github.event.repository.name }} | sed 's/bookverse-//')
           APP_VERSION=${{ needs.build-test-publish.outputs.app_version }}
@@ -409,7 +411,7 @@ jobs:
           echo "   🏷️ Version: $APP_VERSION"
           echo "   🔨 Build: $SERVICE_NAME#$IMAGE_TAG"
 
-      - name: Debug build info contents
+      - name: "[Diag] Build Info contents"
         run: |
           set -euo pipefail
           echo "🔎 Fetching build info to confirm artifacts are present"
@@ -417,7 +419,7 @@ jobs:
           echo "GET $URL"
           curl -sS -H "Authorization: Bearer ${{ secrets.JFROG_ADMIN_TOKEN }}" -H "Accept: application/json" "$URL" | jq '.buildInfo.modules // [] | map({id, artifacts: (.artifacts // [] | length)})'
 
-      - name: Create application version
+      - name: "[Release] Create application version"
         run: |
           echo "🚀 Creating AppTrust application version: $APP_VERSION"
 
@@ -533,7 +535,7 @@ jobs:
           echo "📦 Packages will be automatically bound from build sources"
 
       # Evidence Plan: App UNASSIGNED – slsa-provenance and jira-tickets (gate to DEV)
-      - name: Prepare UNASSIGNED evidence templates (SLSA, Jira)
+      - name: "[Evidence] Prepare UNASSIGNED templates"
         run: |
           set -euo pipefail
           echo "📄 Preparing SLSA and Jira templates"
@@ -567,7 +569,7 @@ jobs:
           - ${T3} — ${T3_TYPE}
           EOF
 
-      - name: Populate UNASSIGNED templates and attach (SLSA, Jira)
+      - name: "[Evidence] Attach UNASSIGNED (SLSA, Jira)"
         env:
           EVIDENCE_PRIVATE_KEY: ${{ secrets.EVIDENCE_PRIVATE_KEY }}
         run: |
@@ -630,7 +632,7 @@ jobs:
             --key "${{ secrets.EVIDENCE_PRIVATE_KEY }}" \
             --key-alias "${{ vars.EVIDENCE_KEY_ALIAS }}"
 
-      - name: Attach SDLC evidence to application version
+      - name: "[Evidence] Attach SDLC"
         env:
           EVIDENCE_PRIVATE_KEY: ${{ secrets.EVIDENCE_PRIVATE_KEY }}
         run: |
@@ -666,7 +668,7 @@ jobs:
             --project "${{ vars.PROJECT_KEY }}" \
             --key "${{ secrets.EVIDENCE_PRIVATE_KEY }}" || echo "⚠️ SDLC evidence attachment failed"
 
-      - name: Generate AppTrust summary
+      - name: "[Summary] AppTrust"
         run: |
           echo "## 🚀 AppTrust Promotion Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY

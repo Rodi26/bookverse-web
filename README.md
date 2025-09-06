@@ -59,3 +59,9 @@ docker run -p 8080:8080 \
 
 - `JFROG_ACCESS_TOKEN`: Access token used by CI to interact with JFrog Platform
 - `EVIDENCE_PRIVATE_KEY`: Private key PEM for evidence signing (mandatory)
+
+## Workflows
+
+- [`ci.yml`](.github/workflows/ci.yml) — CI for the web app: build, package static assets, Docker image, publish artifacts/build-info.
+- [`promote.yml`](.github/workflows/promote.yml) — Promote the web application version through stages with evidence.
+- [`promotion-rollback.yml`](.github/workflows/promotion-rollback.yml) — Roll back a promoted web application version (demo utility).
