@@ -1,4 +1,7 @@
-name: CI
+name: CI — Build web assets, Docker image, and publish build-info
+
+env:
+  DEMO_MODE: "false"
 
 # NOTE: Manual trigger only during development phase
 # Will be changed to automatic triggers (push/PR) when demo is ready

@@ -1,4 +1,7 @@
-name: Promote
+name: Promote — AppTrust promotion and evidence for web application version
+
+env:
+  DEMO_MODE: "false"
 
 on:
   workflow_dispatch:
@@ -6,7 +9,7 @@ on:
       target_stage:
         description: 'Target stage (DEV, QA, STAGING, PROD)'
         required: true
-        type: choice
+        type: choice                                                                      
         default: 'PROD'
         options: [ DEV, QA, STAGING, PROD ]
       application_version:
@@ -31,6 +34,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set Build Info (canonical)
+        if: ${{ inputs.DEMO_MODE == 'true' || env.DEMO_MODE == 'true' }}
         run: |
           BUILD_NAME="${{ github.event.repository.name }}_${{ github.workflow }}_${{ github.job }}"
           BUILD_NUMBER="${{ github.run_number }}-${{ github.run_attempt }}"
@@ -38,6 +42,7 @@ jobs:
           echo "BUILD_NUMBER=$BUILD_NUMBER" >> $GITHUB_ENV
 
       - name: Apply DEMO_MODE settings
+        if: ${{ inputs.DEMO_MODE == 'true' || env.DEMO_MODE == 'true' }}
         run: |
           DEMO="${{ inputs.DEMO_MODE || 'false' }}"
           if [ "$DEMO" = "true" ]; then
@@ -52,6 +57,7 @@ jobs:
           fi
 
       - name: Install prerequisites (jq)
+        if: ${{ inputs.DEMO_MODE == 'true' || env.DEMO_MODE == 'true' }}
         run: |
           sudo apt-get update -y
           sudo apt-get install -y jq
