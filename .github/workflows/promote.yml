@@ -30,15 +30,26 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Apply DEMO_MODE settings
-        if: ${{ inputs.DEMO_MODE == 'true' || env.DEMO_MODE == 'true' }}
+      - name: Set Build Info (canonical)
         run: |
-          echo "🔔 DEMO_MODE enabled"
-          echo "ACTIONS_STEP_DEBUG=true" >> $GITHUB_ENV
-          echo "ACTIONS_RUNNER_DEBUG=true" >> $GITHUB_ENV
-          echo "HTTP_DEBUG_LEVEL=verbose" >> $GITHUB_ENV
-          echo "BASH_XTRACE_ENABLED=1" >> $GITHUB_ENV
-          echo "LOG_LEVEL=DEBUG" >> $GITHUB_ENV
+          BUILD_NAME="${{ github.event.repository.name }}_${{ github.workflow }}_${{ github.job }}"
+          BUILD_NUMBER="${{ github.run_number }}-${{ github.run_attempt }}"
+          echo "BUILD_NAME=$BUILD_NAME" >> $GITHUB_ENV
+          echo "BUILD_NUMBER=$BUILD_NUMBER" >> $GITHUB_ENV
+
+      - name: Apply DEMO_MODE settings
+        run: |
+          DEMO="${{ inputs.DEMO_MODE || 'false' }}"
+          if [ "$DEMO" = "true" ]; then
+            echo "🔔 DEMO_MODE enabled"
+            echo "ACTIONS_STEP_DEBUG=true" >> $GITHUB_ENV
+            echo "ACTIONS_RUNNER_DEBUG=true" >> $GITHUB_ENV
+            echo "HTTP_DEBUG_LEVEL=verbose" >> $GITHUB_ENV
+            echo "BASH_XTRACE_ENABLED=1" >> $GITHUB_ENV
+            echo "LOG_LEVEL=DEBUG" >> $GITHUB_ENV
+          else
+            echo "DEMO_MODE disabled"
+          fi
 
       - name: Install prerequisites (jq)
         run: |
@@ -50,17 +61,26 @@ jobs:
         env:
           JF_URL: ${{ vars.JFROG_URL }}
           JF_PROJECT: ${{ vars.PROJECT_KEY }}
+          JFROG_CLI_BUILD_NAME: ${{ github.event.repository.name }}_${{ github.workflow }}_${{ github.job }}
+          JFROG_CLI_BUILD_NUMBER: ${{ github.run_number }}-${{ github.run_attempt }}
         with:
           version: latest
           oidc-provider-name: bookverse-web-github
           disable-job-summary: false
           oidc-audience: ${{ vars.JFROG_URL }}
 
-      - name: Configure JFrog CLI (admin)
+      - name: Export common env
         run: |
-          jf c add bookverse-admin --interactive=false --url "${{ vars.JFROG_URL }}" --access-token "${{ secrets.JFROG_ADMIN_TOKEN }}"
-          jf c use bookverse-admin
-          jf c show
+          SERVICE_NAME=web
+          APPLICATION_KEY="bookverse-$SERVICE_NAME"
+          REGISTRY_URL="${{ vars.DOCKER_REGISTRY }}"
+          DOCKER_REPO="${{ vars.PROJECT_KEY }}-${SERVICE_NAME}-docker-internal-local"
+          GENERIC_REPO="${{ vars.PROJECT_KEY }}-generic-internal-local"
+          echo "SERVICE_NAME=$SERVICE_NAME" >> $GITHUB_ENV
+          echo "APPLICATION_KEY=$APPLICATION_KEY" >> $GITHUB_ENV
+          echo "REGISTRY_URL=$REGISTRY_URL" >> $GITHUB_ENV
+          echo "DOCKER_REPO=$DOCKER_REPO" >> $GITHUB_ENV
+          echo "GENERIC_REPO=$GENERIC_REPO" >> $GITHUB_ENV
 
       - name: Determine application and version
         id: app
@@ -191,6 +211,40 @@ jobs:
             echo "Skipping release: current stage is $(display_stage_for "${CURRENT_STAGE:-UNASSIGNED}")"
           fi
 
+      - name: Attach promotion evidence
+        env:
+          EVIDENCE_PRIVATE_KEY: ${{ secrets.EVIDENCE_PRIVATE_KEY }}
+        run: |
+          NOW_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          TARGET_NAME_VAL="${TARGET_NAME:-${{ inputs.target_stage }}}"
+          cat > promotion-evidence.json <<JSON
+          {
+            "promotion": {
+              "to": "${TARGET_NAME_VAL}",
+              "version": "${APP_VERSION}",
+              "actor": "${{ github.actor }}",
+              "timestamp": "${NOW_TS}"
+            }
+          }
+          JSON
+          cat > promotion-evidence.md <<EOF
+          # Promotion Evidence
+
+          - Application: \`$APPLICATION_KEY\`
+          - Version: \`$APP_VERSION\`
+          - Target: \`${TARGET_NAME_VAL}\`
+          - Actor: \`${{ github.actor }}\`
+          - Timestamp (UTC): \`${NOW_TS}\`
+          EOF
+          jf evd create-evidence \
+            --predicate promotion-evidence.json \
+            --markdown promotion-evidence.md \
+            --predicate-type "https://jfrog.com/evidence/promotion/v1" \
+            --release-bundle "$APPLICATION_KEY" \
+            --release-bundle-version "$APP_VERSION" \
+            --project "${{ vars.PROJECT_KEY }}" \
+            --key "${{ secrets.EVIDENCE_PRIVATE_KEY }}" || echo "⚠️ Promotion evidence attach failed"
+
       - name: Generate promotion summary
         run: |
           echo "## 🚀 AppTrust Promotion Summary" >> $GITHUB_STEP_SUMMARY
@@ -202,6 +256,10 @@ jobs:
           echo "**Started at:** ${CURRENT_STAGE_BEFORE}" >> $GITHUB_STEP_SUMMARY
           echo "**Promoted stages:** ${PROMOTED_STAGES:-none}" >> $GITHUB_STEP_SUMMARY
           echo "**Released to ${FINAL_STAGE}:** ${DID_RELEASE}" >> $GITHUB_STEP_SUMMARY
+          echo "**Docker Repo:** \`$DOCKER_REPO\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Lifecycle final stage: ${FINAL_STAGE}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🛡️ Evidence" >> $GITHUB_STEP_SUMMARY
+          echo "- Promotion evidence attached" >> $GITHUB_STEP_SUMMARY
 
