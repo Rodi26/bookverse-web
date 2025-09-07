@@ -55,7 +55,7 @@ jobs:
           TARGET_STAGE="${INPUT_TARGET_STAGE:-DEV}"
           ROLLBACK_TO="$INPUT_ROLLBACK_TO"
           REGISTRY_URL="${{ vars.DOCKER_REGISTRY }}"
-          DOCKER_REPO="${{ vars.PROJECT_KEY }}-${SERVICE_NAME}-docker-internal-local"
+          DOCKER_REPO="${{ vars.PROJECT_KEY }}-${SERVICE_NAME}-internal-docker-nonprod-local"
           echo "SERVICE_NAME=$SERVICE_NAME" >> $GITHUB_ENV
           echo "APPLICATION_KEY=$APPLICATION_KEY" >> $GITHUB_ENV
           echo "TARGET_STAGE=$TARGET_STAGE" >> $GITHUB_ENV

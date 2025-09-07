@@ -84,8 +84,8 @@ jobs:
           SERVICE_NAME=web
           APPLICATION_KEY="bookverse-$SERVICE_NAME"
           REGISTRY_URL="${{ vars.DOCKER_REGISTRY }}"
-          DOCKER_REPO="${{ vars.PROJECT_KEY }}-${SERVICE_NAME}-docker-internal-local"
-          GENERIC_REPO="${{ vars.PROJECT_KEY }}-generic-internal-local"
+          DOCKER_REPO="${{ vars.PROJECT_KEY }}-${SERVICE_NAME}-internal-docker-nonprod-local"
+          GENERIC_REPO="${{ vars.PROJECT_KEY }}-${SERVICE_NAME}-internal-generic-nonprod-local"
           echo "SERVICE_NAME=$SERVICE_NAME" >> $GITHUB_ENV
           echo "APPLICATION_KEY=$APPLICATION_KEY" >> $GITHUB_ENV
           echo "REGISTRY_URL=$REGISTRY_URL" >> $GITHUB_ENV
