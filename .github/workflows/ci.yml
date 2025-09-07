@@ -533,8 +533,8 @@ jobs:
           DEBUG_INCLUDE_PROJECT_HEADER=false print_request_debug "POST" "${{ vars.JFROG_URL }}/apptrust/api/v1/applications/$APPLICATION_KEY/versions/?async=false" "<payload>"
 
           # Obtain ephemeral OIDC access token from configured JFrog server and ensure jq is present
-          SERVER_ID="${SETUP_JFROG_CLI_SERVER_IDS:-setup-jfrog-cli-server}"
-          eval "$(jf c export --server-id="$SERVER_ID" --show-token)"
+          # Use the default server that the setup action configured; older jf versions don't accept --server-id
+          eval "$(jf c export --show-token)"
           TOKEN="${JF_ACCESS_TOKEN:-}"
           if [ -z "$TOKEN" ]; then
             echo "❌ Unable to export OIDC access token from JFrog CLI configuration"
