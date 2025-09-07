@@ -532,18 +532,46 @@ jobs:
           echo "🔗 Curl (sanitized): curl -X POST '${{ vars.JFROG_URL }}/apptrust/api/v1/applications/$APPLICATION_KEY/versions/?async=false' -H 'Authorization: Bearer ***' -H 'Content-Type: application/json' -H 'Accept: application/json' -d '<payload>'"
           DEBUG_INCLUDE_PROJECT_HEADER=false print_request_debug "POST" "${{ vars.JFROG_URL }}/apptrust/api/v1/applications/$APPLICATION_KEY/versions/?async=false" "<payload>"
 
-          # Create the application version with status/body capture
-          RESP_BODY=$(mktemp)
-          if jf rt curl -XPOST -H "X-JFrog-Project: ${{ vars.PROJECT_KEY }}" -H "Content-Type: application/json" -H "Accept: application/json" \
-               "/apptrust/api/v1/applications/$APPLICATION_KEY/versions/?async=false" -d "$APP_VERSION_PAYLOAD" > "$RESP_BODY" 2>/dev/null; then
-            echo "📨 Response Body:"; cat "$RESP_BODY"; echo
-          else
-            echo "❌ Failed to create application version" >&2
-            cat "$RESP_BODY" || true
-            rm -f "$RESP_BODY"
+          # Obtain ephemeral OIDC access token from configured JFrog server and ensure jq is present
+          SERVER_ID="${SETUP_JFROG_CLI_SERVER_IDS:-setup-jfrog-cli-server}"
+          eval "$(jf c export --server-id="$SERVER_ID" --show-token)"
+          TOKEN="${JF_ACCESS_TOKEN:-}"
+          if [ -z "$TOKEN" ]; then
+            echo "❌ Unable to export OIDC access token from JFrog CLI configuration"
             exit 1
           fi
-          rm -f "$RESP_BODY"
+          if ! command -v jq >/dev/null 2>&1; then sudo apt-get update -y && sudo apt-get install -y jq >/dev/null; fi
+
+          # Preflight: ensure the application exists; create if 404
+          echo "🔍 Preflight: ensuring application '$APPLICATION_KEY' exists"
+          APP_GET_CODE=$(curl -s -o /dev/null -w '%{http_code}' "${{ vars.JFROG_URL }}/apptrust/api/v1/applications/$APPLICATION_KEY" \
+            -H "Authorization: Bearer $TOKEN" -H "X-JFrog-Project: ${{ vars.PROJECT_KEY }}" -H "Accept: application/json")
+          if [ "$APP_GET_CODE" = "404" ]; then
+            echo "🆕 Application not found; creating it"
+            CREATE_APP_BODY=$(jq -n --arg name "BookVerse Web" --arg key "$APPLICATION_KEY" --arg proj "${{ vars.PROJECT_KEY }}" '{application_name:$name, application_key:$key, project_key:$proj}')
+            APP_CREATE_CODE=$(curl -s -o /tmp/app_create.json -w '%{http_code}' -X POST "${{ vars.JFROG_URL }}/apptrust/api/v1/applications/" \
+              -H "Authorization: Bearer $TOKEN" -H "X-JFrog-Project: ${{ vars.PROJECT_KEY }}" -H "Content-Type: application/json" -H "Accept: application/json" \
+              -d "$CREATE_APP_BODY")
+            echo "📨 Create Application Response:"; cat /tmp/app_create.json || true
+            if [ "$APP_CREATE_CODE" -lt 200 ] || [ "$APP_CREATE_CODE" -ge 300 ]; then
+              echo "❌ Failed to create application (HTTP $APP_CREATE_CODE)"; exit 1
+            fi
+          fi
+
+          # Create the application version via platform endpoint (not Artifactory)
+          RESP_FILE=$(mktemp)
+          HTTP_CODE=$(curl -s -o "$RESP_FILE" -w '%{http_code}' -X POST "${{ vars.JFROG_URL }}/apptrust/api/v1/applications/$APPLICATION_KEY/versions/?async=false" \
+            -H "Authorization: Bearer $TOKEN" -H "X-JFrog-Project: ${{ vars.PROJECT_KEY }}" -H "Content-Type: application/json" -H "Accept: application/json" \
+            -d "$APP_VERSION_PAYLOAD")
+          echo "📨 Response Body:"; cat "$RESP_FILE" || true; echo
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            :
+          elif [ "$HTTP_CODE" = "409" ]; then
+            echo "⚠️ Application version already exists; continuing"
+          else
+            echo "❌ Create application version failed (HTTP $HTTP_CODE)"; exit 1
+          fi
+          rm -f "$RESP_FILE"
 
           echo "✅ Application version created: $APPLICATION_KEY@$APP_VERSION"
           echo "📦 Packages will be automatically bound from build sources"
