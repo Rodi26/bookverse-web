@@ -527,8 +527,8 @@ jobs:
               echo "-----------------------"
             }
           fi
-          echo "🔗 Curl (sanitized): curl -X POST '${{ vars.JFROG_URL }}/apptrust/api/v1/applications/$APPLICATION_KEY/versions/?async=false' -H 'Authorization: Bearer ***' -H 'Content-Type: application/json' -H 'Accept: application/json' -d '<payload>'"
-          DEBUG_INCLUDE_PROJECT_HEADER=false print_request_debug "POST" "${{ vars.JFROG_URL }}/apptrust/api/v1/applications/$APPLICATION_KEY/versions/?async=false" "<payload>"
+          echo "🔗 Curl (sanitized): curl -X POST '${{ vars.JFROG_URL }}/apptrust/api/v1/applications/$APPLICATION_KEY/versions?async=false' -H 'Authorization: Bearer ***' -H 'Content-Type: application/json' -H 'Accept: application/json' -d '<payload>'"
+          DEBUG_INCLUDE_PROJECT_HEADER=false print_request_debug "POST" "${{ vars.JFROG_URL }}/apptrust/api/v1/applications/$APPLICATION_KEY/versions?async=false" "<payload>"
 
           # Ensure jq is present
           if ! command -v jq >/dev/null 2>&1; then sudo apt-get update -y && sudo apt-get install -y jq >/dev/null; fi
@@ -544,12 +544,12 @@ jobs:
 
           # Create the application version via platform endpoint (not Artifactory)
           RESP_FILE=$(mktemp)
-          if jf rt curl -X POST -H "X-JFrog-Project: ${{ vars.PROJECT_KEY }}" -H "Content-Type: application/json" -H "Accept: application/json" -d "$APP_VERSION_PAYLOAD" "/apptrust/api/v1/applications/$APPLICATION_KEY/versions/?async=false" > "$RESP_FILE" 2>/tmp/app_version.err; then
+          if jf rt curl -X POST -H "X-JFrog-Project: ${{ vars.PROJECT_KEY }}" -H "Content-Type: application/json" -H "Accept: application/json" -d "$APP_VERSION_PAYLOAD" "/apptrust/api/v1/applications/$APPLICATION_KEY/versions?async=false" > "$RESP_FILE" 2>/tmp/app_version.err; then
             :
           else
             echo "⚠️ Create application version may have failed; retrying once after ensuring application exists"
             echo "📨 Response Body (first attempt):"; cat "$RESP_FILE" || true; echo
-            jf rt curl -X POST -H "X-JFrog-Project: ${{ vars.PROJECT_KEY }}" -H "Content-Type: application/json" -H "Accept: application/json" -d "$APP_VERSION_PAYLOAD" "/apptrust/api/v1/applications/$APPLICATION_KEY/versions/?async=false" > "$RESP_FILE" 2>/tmp/app_version_retry.err || true
+            jf rt curl -X POST -H "X-JFrog-Project: ${{ vars.PROJECT_KEY }}" -H "Content-Type: application/json" -H "Accept: application/json" -d "$APP_VERSION_PAYLOAD" "/apptrust/api/v1/applications/$APPLICATION_KEY/versions?async=false" > "$RESP_FILE" 2>/tmp/app_version_retry.err || true
           fi
           echo "📨 Response Body:"; cat "$RESP_FILE" || true; echo
 
