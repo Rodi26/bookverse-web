@@ -553,6 +553,14 @@ jobs:
           fi
           echo "📨 Response Body:"; cat "$RESP_FILE" || true; echo
 
+          # Verify the application version now exists; fail early if not
+          if jf rt curl -H "Accept: application/json" "/apptrust/api/v1/applications/$APPLICATION_KEY/versions/$APP_VERSION" >/dev/null 2>&1; then
+            echo "✅ Verified application version exists: $APPLICATION_KEY@$APP_VERSION"
+          else
+            echo "❌ Application version verification failed for $APPLICATION_KEY@$APP_VERSION"
+            exit 1
+          fi
+
           echo "✅ Application version created: $APPLICATION_KEY@$APP_VERSION"
           echo "📦 Packages will be automatically bound from build sources"
 
