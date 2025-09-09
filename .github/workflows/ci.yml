@@ -406,7 +406,9 @@ jobs:
 
       - name: "[Setup] JFrog config"
         run: |
-          # With OIDC setup action, a default server id is already configured.
+          # Prefer explicit admin context to avoid OIDC trust gaps for evidence API calls
+          jf c add bookverse-admin --interactive=false --url "${{ vars.JFROG_URL }}" --access-token "${{ secrets.JFROG_ADMIN_TOKEN }}" || true
+          jf c use bookverse-admin || true
           jf c show
 
       - name: "[Setup] AppTrust variables"
@@ -627,7 +629,11 @@ jobs:
       - name: "[Evidence] Attach UNASSIGNED (SLSA, Jira)"
         env:
           EVIDENCE_PRIVATE_KEY: ${{ secrets.EVIDENCE_PRIVATE_KEY }}
+          JFROG_CLI_SERVER_ID: bookverse-admin
         run: |
+          # Force using the admin-configured JFrog server for evidence API calls
+          SERVER_ID="${JFROG_CLI_SERVER_ID:-bookverse-admin}"
+          jf c use "$SERVER_ID" || true
           set -euo pipefail
           if ! command -v envsubst >/dev/null 2>&1; then sudo apt-get update -y && sudo apt-get install -y gettext-base; fi
           NOW_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
