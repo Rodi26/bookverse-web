@@ -479,7 +479,7 @@ jobs:
                   "name": "$BUILD_NAME",
                   "number": "$BUILD_NUMBER",
                   "repository_key": "$BUILD_INFO_REPO",
-                  "include_dependencies": true
+                  "include_dependencies": false
                 }
               ]
             }
