@@ -43,6 +43,28 @@ docker run -p 8080:8080 \
 - `RECOMMENDATIONS_BASE_URL`: backend recommendations base URL
 - `CHECKOUT_BASE_URL`: backend checkout base URL
 
+### Environment Variable Substitution
+
+The `entrypoint.sh` script performs runtime environment variable substitution in the `config.js` file. This allows the web application to connect to different backend services based on the deployment environment.
+
+**Important**: The heredoc in `entrypoint.sh` must NOT use single quotes (`<<'CFG'`) as this prevents shell variable expansion. Use `<<CFG` instead to enable proper substitution.
+
+### Backend URL Configuration
+
+**Production/Kubernetes**: Use internal service names
+```bash
+INVENTORY_BASE_URL=http://inventory
+RECOMMENDATIONS_BASE_URL=http://recommendations  
+CHECKOUT_BASE_URL=http://checkout
+```
+
+**Local Development**: Use localhost with port-forwarding
+```bash
+INVENTORY_BASE_URL=http://localhost:8001
+RECOMMENDATIONS_BASE_URL=http://localhost:8003
+CHECKOUT_BASE_URL=http://localhost:8002
+```
+
 ## CI/CD
 
 - The web workflow builds static assets, uploads an artifacts tarball to a
