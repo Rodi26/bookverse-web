@@ -2,19 +2,16 @@
 
 # Promotion helper (aligned with checkout/inventory)
 
-print_request_debug() {
-  local method="$1"; local url="$2"; local body="${3:-}"; local level="${HTTP_DEBUG_LEVEL:-basic}"
-  [ "$level" = "none" ] && return 0
-  local show_project_header=false
-  if [[ "${DEBUG_INCLUDE_PROJECT_HEADER:-}" == "true" || "${DEBUG_INCLUDE_PROJECT_HEADER:-}" == "1" ]]; then
-    show_project_header=true
+print_request_info() {
+  local method="$1"; local url="$2"; local body="${3:-}"
+  echo "---- HTTP Request ----"
+  echo "Method: ${method}"
+  echo "URL: ${url}"
+  echo "Headers: Authorization: Bearer ***REDACTED***, Accept: application/json"
+  if [[ "$method" == "POST" && -n "$body" ]]; then
+    echo "Body: ${body}"
   fi
-  local show_content_type=false; [[ "$method" == "POST" ]] && show_content_type=true
-  echo "---- Request debug (${level}) ----"
-  echo "Method: ${method}"; echo "URL: ${url}"; echo "Headers:"; echo "  Authorization: Bearer ***REDACTED***"
-  if $show_project_header && [[ -n "${PROJECT_KEY:-}" ]]; then echo "  X-JFrog-Project: ${PROJECT_KEY}"; fi
-  if $show_content_type; then echo "  Content-Type: application/json"; fi
-  echo "  Accept: application/json"; [[ -n "$body" && "$level" = "verbose" ]] && echo "Body: ${body}"; echo "-----------------------"
+  echo "---------------------"
 }
 
 api_stage_for() { local s="${1:-}"; if [[ "$s" == "PROD" ]]; then echo "PROD"; elif [[ "$s" == "${PROJECT_KEY:-}-"* ]]; then echo "$s"; else echo "${PROJECT_KEY:-}-$s"; fi; }
@@ -28,7 +25,7 @@ fetch_summary() {
     CURRENT_STAGE=$(jq -r '.current_stage // empty' "$body" 2>/dev/null || echo "");
     RELEASE_STATUS=$(jq -r '.release_status // empty' "$body" 2>/dev/null || echo "");
   else
-    echo "❌ Failed to fetch version summary (HTTP $code)" >&2; print_request_debug "GET" "${JFROG_URL}/apptrust/api/v1/applications/${APPLICATION_KEY}/versions/${APP_VERSION}/content"; cat "$body" || true; rm -f "$body"; return 1
+    echo "❌ Failed to fetch version summary (HTTP $code)" >&2; print_request_info "GET" "${JFROG_URL}/apptrust/api/v1/applications/${APPLICATION_KEY}/versions/${APP_VERSION}/content"; cat "$body" || true; rm -f "$body"; return 1
   fi
   rm -f "$body"; [[ -n "${GITHUB_ENV:-}" ]] && { echo "CURRENT_STAGE=${CURRENT_STAGE:-}" >> "$GITHUB_ENV"; echo "RELEASE_STATUS=${RELEASE_STATUS:-}" >> "$GITHUB_ENV"; }
   echo "🔎 Current stage: $(display_stage_for "${CURRENT_STAGE:-UNASSIGNED}") (release_status=${RELEASE_STATUS:-unknown})"
@@ -36,9 +33,9 @@ fetch_summary() {
 
 apptrust_post(){ local path="${1:-}" data="${2:-}" out="${3:-}"; curl -sS -L -o "$out" -w "%{http_code}" -X POST "${JFROG_URL}${path}" -H "Authorization: Bearer ${JFROG_ADMIN_TOKEN}" -H "Content-Type: application/json" -H "Accept: application/json" -d "$data"; }
 
-promote_to_stage(){ local d="${1:-}" resp=$(mktemp) code api; api=$(resolve_api_stage_for_display "$d"); echo "🚀 Promoting to ${d} via AppTrust"; code=$(apptrust_post "/apptrust/api/v1/applications/${APPLICATION_KEY}/versions/${APP_VERSION}/promote?async=false" "{\"target_stage\": \"${api}\", \"promotion_type\": \"move\"}" "$resp"); echo "HTTP $code"; cat "$resp" || true; echo; rm -f "$resp"; if [[ "$code" -lt 200 || "$code" -ge 300 ]]; then echo "❌ Promotion to ${d} failed (HTTP $code)" >&2; print_request_debug "POST" "${JFROG_URL}/apptrust/api/v1/applications/${APPLICATION_KEY}/versions/${APP_VERSION}/promote?async=false" "{\"target_stage\": \"${api}\", \"promotion_type\": \"move\"}"; return 1; fi; PROMOTED_STAGES="${PROMOTED_STAGES:-}${PROMOTED_STAGES:+ }${d}"; echo "PROMOTED_STAGES=${PROMOTED_STAGES}" >> "${GITHUB_ENV:-/dev/null}"; fetch_summary; }
+promote_to_stage(){ local d="${1:-}" resp=$(mktemp) code api; api=$(resolve_api_stage_for_display "$d"); echo "🚀 Promoting to ${d} via AppTrust"; code=$(apptrust_post "/apptrust/api/v1/applications/${APPLICATION_KEY}/versions/${APP_VERSION}/promote?async=false" "{\"target_stage\": \"${api}\", \"promotion_type\": \"move\"}" "$resp"); echo "HTTP $code"; cat "$resp" || true; echo; rm -f "$resp"; if [[ "$code" -lt 200 || "$code" -ge 300 ]]; then echo "❌ Promotion to ${d} failed (HTTP $code)" >&2; print_request_info "POST" "${JFROG_URL}/apptrust/api/v1/applications/${APPLICATION_KEY}/versions/${APP_VERSION}/promote?async=false" "{\"target_stage\": \"${api}\", \"promotion_type\": \"move\"}"; return 1; fi; PROMOTED_STAGES="${PROMOTED_STAGES:-}${PROMOTED_STAGES:+ }${d}"; echo "PROMOTED_STAGES=${PROMOTED_STAGES}" >> "${GITHUB_ENV:-/dev/null}"; fetch_summary; }
 
-release_version(){ local resp=$(mktemp) code payload service repo_docker repo_generic; echo "🚀 Releasing to ${FINAL_STAGE} via AppTrust Release API"; if [[ -n "${RELEASE_INCLUDED_REPO_KEYS:-}" ]]; then payload=$(printf '{"promotion_type":"move","included_repository_keys":%s}' "${RELEASE_INCLUDED_REPO_KEYS}"); else service="${APPLICATION_KEY#${PROJECT_KEY}-}"; repo_docker="${PROJECT_KEY}-${service}-internal-docker-release-local"; repo_generic="${PROJECT_KEY}-${service}-internal-generic-release-local"; payload=$(printf '{"promotion_type":"move","included_repository_keys":["%s","%s"]}' "$repo_docker" "$repo_generic"); fi; code=$(curl -sS -L -o "$resp" -w "%{http_code}" -X POST "${JFROG_URL}/apptrust/api/v1/applications/${APPLICATION_KEY}/versions/${APP_VERSION}/release?async=false" -H "Authorization: Bearer ${JFROG_ADMIN_TOKEN}" -H "Content-Type: application/json" -H "Accept: application/json" -d "$payload"); echo "HTTP $code"; cat "$resp" || true; echo; if [[ "$code" -lt 200 || "$code" -ge 300 ]]; then echo "❌ Release to ${FINAL_STAGE} failed (HTTP $code)" >&2; print_request_debug "POST" "${JFROG_URL}/apptrust/api/v1/applications/${APPLICATION_KEY}/versions/${APP_VERSION}/release?async=false" "$payload"; rm -f "$resp"; return 1; fi; rm -f "$resp"; DID_RELEASE=true; echo "DID_RELEASE=${DID_RELEASE}" >> "${GITHUB_ENV:-/dev/null}"; PROMOTED_STAGES="${PROMOTED_STAGES:-}${PROMOTED_STAGES:+ }${FINAL_STAGE}"; echo "PROMOTED_STAGES=${PROMOTED_STAGES}" >> "${GITHUB_ENV:-/dev/null}"; fetch_summary; }
+release_version(){ local resp=$(mktemp) code payload service repo_docker repo_generic; echo "🚀 Releasing to ${FINAL_STAGE} via AppTrust Release API"; if [[ -n "${RELEASE_INCLUDED_REPO_KEYS:-}" ]]; then payload=$(printf '{"promotion_type":"move","included_repository_keys":%s}' "${RELEASE_INCLUDED_REPO_KEYS}"); else service="${APPLICATION_KEY#${PROJECT_KEY}-}"; repo_docker="${PROJECT_KEY}-${service}-internal-docker-release-local"; repo_generic="${PROJECT_KEY}-${service}-internal-generic-release-local"; payload=$(printf '{"promotion_type":"move","included_repository_keys":["%s","%s"]}' "$repo_docker" "$repo_generic"); fi; code=$(curl -sS -L -o "$resp" -w "%{http_code}" -X POST "${JFROG_URL}/apptrust/api/v1/applications/${APPLICATION_KEY}/versions/${APP_VERSION}/release?async=false" -H "Authorization: Bearer ${JFROG_ADMIN_TOKEN}" -H "Content-Type: application/json" -H "Accept: application/json" -d "$payload"); echo "HTTP $code"; cat "$resp" || true; echo; if [[ "$code" -lt 200 || "$code" -ge 300 ]]; then echo "❌ Release to ${FINAL_STAGE} failed (HTTP $code)" >&2; print_request_info "POST" "${JFROG_URL}/apptrust/api/v1/applications/${APPLICATION_KEY}/versions/${APP_VERSION}/release?async=false" "$payload"; rm -f "$resp"; return 1; fi; rm -f "$resp"; DID_RELEASE=true; echo "DID_RELEASE=${DID_RELEASE}" >> "${GITHUB_ENV:-/dev/null}"; PROMOTED_STAGES="${PROMOTED_STAGES:-}${PROMOTED_STAGES:+ }${FINAL_STAGE}"; echo "PROMOTED_STAGES=${PROMOTED_STAGES}" >> "${GITHUB_ENV:-/dev/null}"; fetch_summary; }
 
 advance_one_step(){ local allow_release="${ALLOW_RELEASE:-false}"; IFS=' ' read -r -a STAGES <<< "${STAGES_STR:-}"; local current_index=-1 display_current target_index=-1 next_index next_stage_display; display_current=$(display_stage_for "${CURRENT_STAGE:-}"); if [[ -z "${CURRENT_STAGE:-}" || "${display_current}" == "UNASSIGNED" ]]; then current_index=-1; else local i; for i in "${!STAGES[@]}"; do [[ "${STAGES[$i]}" == "${display_current}" ]] && { current_index=$i; break; }; done; fi; local j; for j in "${!STAGES[@]}"; do [[ "${STAGES[$j]}" == "${TARGET_NAME}" ]] && { target_index=$j; break; }; done; [[ "$target_index" -lt 0 ]] && { echo "❌ Target stage '${TARGET_NAME}' not found in lifecycle. Available: ${STAGES[*]}" >&2; return 1; }; [[ "$current_index" -ge "$target_index" ]] && { echo "ℹ️ Current stage (${CURRENT_STAGE:-UNASSIGNED}) is at or beyond target (${TARGET_NAME}). Nothing to promote."; return 0; }; next_index=$((current_index+1)); [[ "$next_index" -gt "$target_index" ]] && { echo "ℹ️ Next stage would exceed target (${TARGET_NAME}). Nothing to promote."; return 0; }; next_stage_display="${STAGES[$next_index]}"; if [[ "$next_stage_display" == "$FINAL_STAGE" ]]; then if [[ "$allow_release" == "true" ]]; then release_version || return 1; else echo "⏭️ Skipping release step (deferred to dedicated step)"; fi; else promote_to_stage "$next_stage_display" || return 1; fi; }
 
@@ -47,30 +44,6 @@ set -euo pipefail
 
 # Shared helper copied from inventory to standardize AppTrust promotion/release
 
-print_request_debug() {
-  local method="${1:-}"; local url="${2:-}"; local body="${3:-}"; local level="${HTTP_DEBUG_LEVEL:-basic}"
-  [ "$level" = "none" ] && return 0
-  local show_project_header=false
-  local show_content_type=false
-  if [[ "$url" == *"/apptrust/api/"* ]]; then
-    if [[ "$url" == *"/promote"* || "$url" == *"/release"* ]]; then
-      show_project_header=false
-    else
-      show_project_header=true
-    fi
-  fi
-  if [[ "$method" == "POST" ]]; then show_content_type=true; fi
-  echo "---- Request debug (${level}) ----"
-  echo "Method: ${method}"
-  echo "URL: ${url}"
-  echo "Headers:"
-  echo "  Authorization: Bearer ***REDACTED***"
-  if $show_project_header && [[ -n "${PROJECT_KEY:-}" ]]; then echo "  X-JFrog-Project: ${PROJECT_KEY}"; fi
-  if $show_content_type; then echo "  Content-Type: application/json"; fi
-  echo "  Accept: application/json"
-  if [ -n "$body" ] && [ "$level" = "verbose" ]; then echo "Body: ${body}"; fi
-  echo "-----------------------"
-}
 
 api_stage_for() {
   local s="${1:-}"
@@ -93,7 +66,7 @@ fetch_summary() {
     RELEASE_STATUS=$(jq -r '.release_status // empty' "$body" 2>/dev/null || echo "")
   else
     echo "❌ Failed to fetch version summary (HTTP $code)" >&2
-    print_request_debug "GET" "${JFROG_URL}/apptrust/api/v1/applications/${APPLICATION_KEY}/versions/${APP_VERSION}/content"
+    print_request_info "GET" "${JFROG_URL}/apptrust/api/v1/applications/${APPLICATION_KEY}/versions/${APP_VERSION}/content"
     cat "$body" || true
     rm -f "$body"; return 1
   fi
@@ -126,7 +99,7 @@ promote_to_stage() {
   rm -f "$resp_body"
   if [[ "$http_status" -lt 200 || "$http_status" -ge 300 ]]; then
     echo "❌ Promotion to ${target_stage_display} failed (HTTP $http_status)" >&2
-    print_request_debug "POST" "${JFROG_URL}/apptrust/api/v1/applications/${APPLICATION_KEY}/versions/${APP_VERSION}/promote?async=false" "{\"target_stage\": \"${api_stage}\", \"promotion_type\": \"move\"}"
+    print_request_info "POST" "${JFROG_URL}/apptrust/api/v1/applications/${APPLICATION_KEY}/versions/${APP_VERSION}/promote?async=false" "{\"target_stage\": \"${api_stage}\", \"promotion_type\": \"move\"}"
     return 1
   fi
   PROMOTED_STAGES="${PROMOTED_STAGES:-}${PROMOTED_STAGES:+ }${target_stage_display}"
@@ -147,7 +120,7 @@ release_version() {
   echo "HTTP $http_status"; cat "$resp_body" || true; echo
   if [[ "$http_status" -lt 200 || "$http_status" -ge 300 ]]; then
     echo "❌ Release to ${FINAL_STAGE} failed (HTTP $http_status)" >&2
-    print_request_debug "POST" "${JFROG_URL}/apptrust/api/v1/applications/${APPLICATION_KEY}/versions/${APP_VERSION}/release?async=false" "$payload"
+    print_request_info "POST" "${JFROG_URL}/apptrust/api/v1/applications/${APPLICATION_KEY}/versions/${APP_VERSION}/release?async=false" "$payload"
     rm -f "$resp_body"; return 1
   fi
   rm -f "$resp_body"; DID_RELEASE=true; echo "DID_RELEASE=${DID_RELEASE}" >> "$GITHUB_ENV"

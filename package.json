@@ -5,7 +5,6 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "build:debug": "vite build --mode debug",
     "preview": "vite preview --port 5173"
   },
   "devDependencies": {

@@ -1,12 +1,12 @@
 import { defineConfig } from 'vite'
 
-export default defineConfig(({ mode }) => ({
+export default defineConfig(() => ({
   root: '.',
   server: { port: 5173 },
   build: {
     outDir: 'dist',
-    sourcemap: mode === 'debug',
-    minify: mode === 'debug' ? false : 'esbuild'
+    sourcemap: false,
+    minify: 'esbuild'
   }
 }))
 
