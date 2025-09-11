@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -e
 
-cat >/usr/share/nginx/html/config.js <<'CFG'
+cat >/usr/share/nginx/html/config.js <<CFG
 window.__BOOKVERSE_CONFIG__ = {
   env: "${BOOKVERSE_ENV:-DEV}",
   inventoryBaseUrl: "${INVENTORY_BASE_URL:-}",
