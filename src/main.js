@@ -12,7 +12,8 @@ function bootstrap() {
     return
   }
   initRouter(app, {
-    '/': renderHome,
+    '/': renderCatalog,
+    '/home': renderHome,
     '/catalog': renderCatalog,
     '/book/:id': renderBook,
     '/cart': renderCart,

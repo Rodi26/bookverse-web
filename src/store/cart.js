@@ -22,8 +22,20 @@ export function addToCart(bookId, qty, unitPrice) {
   return cart
 }
 
+export function removeFromCart(bookId) {
+  const cart = getCart()
+  cart.items = cart.items.filter(item => item.bookId !== bookId)
+  saveCart(cart)
+  return cart
+}
+
 export function clearCart() {
   saveCart({ items: [] })
+}
+
+export function isInCart(bookId) {
+  const cart = getCart()
+  return cart.items.some(item => item.bookId === bookId)
 }
 
 

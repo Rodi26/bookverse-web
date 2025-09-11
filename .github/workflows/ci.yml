@@ -131,7 +131,17 @@ jobs:
           set -euo pipefail
           SERVICE_NAME=${SERVICE_NAME:-$(echo ${{ github.event.repository.name }} | sed 's/bookverse-//')}
           APPLICATION_KEY="bookverse-$SERVICE_NAME"
+          REGISTRY_URL=${REGISTRY_URL:-${{ vars.DOCKER_REGISTRY }}}
+          REPO_KEY="${{ vars.PROJECT_KEY }}-$SERVICE_NAME-internal-docker-nonprod-local"
+
+          # Locate local version map for seed versions
           VMAP_PATH="./config/version-map.yaml"
+          if [[ ! -f "$VMAP_PATH" && -f "./.github/version-map.yaml" ]]; then VMAP_PATH="./.github/version-map.yaml"; fi
+          if [[ -f "$VMAP_PATH" ]]; then
+            echo "📄 Using local version map: $VMAP_PATH"
+          else
+            echo "ℹ️ No local version map found; will rely on existing versions or fallback seeds"
+          fi
           
           echo "🔎 Resolving next Application SemVer for $APPLICATION_KEY (SemVer sort)"
           APP_RESP=$(curl -sS -L -X GET "${{ vars.JFROG_URL }}/apptrust/api/v1/applications/$APPLICATION_KEY/versions?limit=200" \
@@ -140,6 +150,7 @@ jobs:
             -H "Accept: application/json" 2>/dev/null || echo '{"error":"curl_failed"}')
           if ! echo "$APP_RESP" | jq -e . >/dev/null 2>&1; then
             APP_LATEST=""
+            echo "⚠️ versions API did not return valid JSON. First 200 chars:" && printf '%s' "$APP_RESP" | head -c 200 || true; echo
           else
             # Take all versions, strip any pre-release suffix, keep strict X.Y.Z, sort numerically and pick last
             PARSED=$(echo "$APP_RESP" | jq -r '[.versions[]?.version? | gsub("-.*$"; "") | select(test("^[0-9]+\\.[0-9]+\\.[0-9]+$"))]')
@@ -173,10 +184,8 @@ jobs:
           echo "APP_VERSION=$APP_VERSION" >> $GITHUB_ENV
           echo "app_version=$APP_VERSION" >> $GITHUB_OUTPUT
 
-          REPO_KEY="${{ vars.PROJECT_KEY }}-$SERVICE_NAME-internal-docker-nonprod-local"
-          VMAP_PATH="./config/version-map.yaml"
           echo "🔎 Resolving next Image SemVer for docker:$REPO_KEY/$SERVICE_NAME (SemVer sort)"
-          IMG_RESP=$(curl -sS -L -X GET "${{ vars.JFROG_URL }}/api/docker/$REPO_KEY/$SERVICE_NAME/tags/list" \
+          IMG_RESP=$(curl -sS -L -X GET "${{ vars.JFROG_URL }}/api/docker/$REPO_KEY/v2/$SERVICE_NAME/tags/list" \
             -H "Authorization: Bearer $JF_ACCESS_TOKEN" \
             -H "Accept: application/json" 2>/dev/null || echo '{"error":"curl_failed"}')
           if ! echo "$IMG_RESP" | jq -e . >/dev/null 2>&1; then
@@ -202,10 +211,8 @@ jobs:
             echo "✅ Using package seed version from version-map.yaml: $IMAGE_TAG"
           fi
 
-          # Update image tag/name to use SemVer
-          REGISTRY_URL=${REGISTRY_URL:-${{ vars.DOCKER_REGISTRY }}}
-          REPO_KEY="${{ vars.PROJECT_KEY }}-$SERVICE_NAME-internal-docker-nonprod-local"
-          IMAGE_NAME="$REGISTRY_URL/$REPO_KEY/$SERVICE_NAME:$IMAGE_TAG"
+          IMAGE_NAME_PATH="$REGISTRY_URL/$REPO_KEY/$SERVICE_NAME:$IMAGE_TAG"
+          IMAGE_NAME="$IMAGE_NAME_PATH"
           echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
           echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
           echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
