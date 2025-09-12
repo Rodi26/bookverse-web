@@ -1,5 +1,5 @@
 export class CircuitBreaker {
-  constructor({ failureThreshold = 3, cooldownMs = 5000 } = {}) {
+  constructor({ failureThreshold = 5, cooldownMs = 2000 } = {}) {
     this.failureThreshold = failureThreshold
     this.cooldownMs = cooldownMs
     this.state = 'closed'
