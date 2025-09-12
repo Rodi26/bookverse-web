@@ -1,1 +1,1 @@
-trigger
+trigger-e2e-test-$(date +%Y%m%d-%H%M%S)
