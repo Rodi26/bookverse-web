@@ -1,10 +1,5 @@
-import { CircuitBreaker } from '../util/circuitBreaker.js'
-
-const breakers = {
-  inventory: new CircuitBreaker(),
-  recommendations: new CircuitBreaker(),
-  checkout: new CircuitBreaker(),
-}
+// Circuit breaker removed - was causing more issues than benefits
+// Modern browsers and Kubernetes provide sufficient resilience
 
 function serviceBase(service) {
   const cfg = window.__BOOKVERSE_CONFIG__ || {}
@@ -47,18 +42,12 @@ function retryWithJitter(fn, { retries = 2, baseMs = 200 } = {}) {
 
 export async function httpRequest(service, path, opts = {}) {
   const base = serviceBase(service)
-  const breaker = breakers[service]
-  if (!breaker || !breaker.canRequest()) {
-    throw new Error(`circuit_open:${service}`)
-  }
   const url = `${base}${path}`
   try {
     const res = await retryWithJitter(() => fetchWithTimeout(url, withHeaders(opts)), { retries: 2, baseMs: 200 })
     if (!res.ok) throw new Error(`http_${res.status}`)
-    breaker.recordSuccess()
     return res
   } catch (e) {
-    breaker.recordFailure()
     throw e
   }
 }
