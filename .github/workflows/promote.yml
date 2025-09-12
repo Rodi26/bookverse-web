@@ -269,7 +269,8 @@ jobs:
             --release-bundle "$APPLICATION_KEY" \
             --release-bundle-version "$APP_VERSION" \
             --project "${{ vars.PROJECT_KEY }}" \
-            --key "${{ secrets.EVIDENCE_PRIVATE_KEY }}" || echo "⚠️ Promotion evidence attach failed"
+            --key "${{ secrets.EVIDENCE_PRIVATE_KEY }}" \
+            --key-alias "${{ vars.EVIDENCE_KEY_ALIAS }}" || echo "⚠️ Promotion evidence attach failed"
 
       - name: "[Summary] Promotion"
         if: always()
