@@ -1,58 +1,67 @@
 // BookVerse Release Information Component
 export function renderReleaseInfo() {
   return `
-    <div id="release-info-modal" class="modal-overlay" style="display: none;">
-      <div class="modal-content" style="background: white; padding: 24px; border-radius: 8px; max-width: 600px; margin: 10% auto; position: relative; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
-        <button id="close-release-info" style="position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">&times;</button>
+    <div id="release-info-modal" class="modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
+      <div class="modal-content" style="background: var(--panel); color: var(--text); padding: 32px; border-radius: 12px; max-width: 700px; margin: 0 20px; position: relative; box-shadow: 0 10px 40px rgba(0,0,0,0.15); max-height: 80vh; overflow-y: auto;">
+        <button id="close-release-info" style="position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 24px; cursor: pointer; color: var(--muted); font-weight: bold;">&times;</button>
         
-        <h2 style="margin: 0 0 20px 0; color: #2c5aa0;">📊 BookVerse Release Information</h2>
+        <h2 style="margin: 0 0 24px 0; color: var(--brand); font-size: 24px;">📊 BookVerse Release Information</h2>
         
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
-          <div>
-            <h3 style="margin: 0 0 12px 0; color: #333; font-size: 16px;">🌐 Web Application</h3>
-            <div style="font-size: 14px; line-height: 1.6;">
-              <div><strong>Version:</strong> <span id="web-version">Loading...</span></div>
-              <div><strong>Image:</strong> <span id="web-image">Loading...</span></div>
-              <div><strong>Environment:</strong> <span id="web-env">Loading...</span></div>
-              <div><strong>Build Date:</strong> <span id="web-build-date">Loading...</span></div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
+          <div style="background: var(--bg); padding: 20px; border-radius: 8px; border: 1px solid var(--border);">
+            <h3 style="margin: 0 0 16px 0; color: var(--text); font-size: 16px; font-weight: 600;">🌐 Web Application</h3>
+            <div style="font-size: 14px; line-height: 1.8; color: var(--text);">
+              <div><strong style="color: var(--brand);">Version:</strong> <span id="web-version" style="color: var(--text);">Loading...</span></div>
+              <div><strong style="color: var(--brand);">Image:</strong> <span id="web-image" style="color: var(--text);">Loading...</span></div>
+              <div><strong style="color: var(--brand);">Environment:</strong> <span id="web-env" style="color: var(--text);">Loading...</span></div>
+              <div><strong style="color: var(--brand);">Last Updated:</strong> <span id="version-changed" style="color: var(--text);">Loading...</span></div>
             </div>
           </div>
           
-          <div>
-            <h3 style="margin: 0 0 12px 0; color: #333; font-size: 16px;">🏢 Platform Services</h3>
-            <div style="font-size: 14px; line-height: 1.6;">
-              <div><strong>Platform:</strong> <span id="platform-version">Loading...</span></div>
-              <div><strong>Inventory:</strong> <span id="inventory-version">Loading...</span></div>
-              <div><strong>Recommendations:</strong> <span id="recommendations-version">Loading...</span></div>
-              <div><strong>Checkout:</strong> <span id="checkout-version">Loading...</span></div>
+          <div style="background: var(--bg); padding: 20px; border-radius: 8px; border: 1px solid var(--border);">
+            <h3 style="margin: 0 0 16px 0; color: var(--text); font-size: 16px; font-weight: 600;">🏢 Platform Services</h3>
+            <div style="font-size: 14px; line-height: 1.8; color: var(--text);">
+              <div><strong style="color: var(--brand);">Platform:</strong> <span id="platform-version" style="color: var(--text);">Loading...</span></div>
+              <div><strong style="color: var(--brand);">Inventory:</strong> <span id="inventory-version" style="color: var(--text);">Loading...</span></div>
+              <div><strong style="color: var(--brand);">Recommendations:</strong> <span id="recommendations-version" style="color: var(--text);">Loading...</span></div>
+              <div><strong style="color: var(--brand);">Checkout:</strong> <span id="checkout-version" style="color: var(--text);">Loading...</span></div>
             </div>
           </div>
         </div>
         
-        <div style="border-top: 1px solid #eee; padding-top: 16px;">
-          <h3 style="margin: 0 0 12px 0; color: #333; font-size: 16px;">🔧 System Information</h3>
-          <div style="font-size: 14px; line-height: 1.6;">
-            <div><strong>User Agent:</strong> <span id="user-agent">Loading...</span></div>
-            <div><strong>Timestamp:</strong> <span id="timestamp">Loading...</span></div>
-            <div><strong>Configuration:</strong> <span id="config-status">Loading...</span></div>
+        <div style="background: var(--bg); padding: 20px; border-radius: 8px; border: 1px solid var(--border);">
+          <h3 style="margin: 0 0 16px 0; color: var(--text); font-size: 16px; font-weight: 600;">🔧 System Information</h3>
+          <div style="font-size: 14px; line-height: 1.8; color: var(--text);">
+            <div><strong style="color: var(--brand);">Uptime:</strong> <span id="uptime" style="color: var(--text);">Loading...</span></div>
+            <div><strong style="color: var(--brand);">Browser:</strong> <span id="user-agent" style="color: var(--text);">Loading...</span></div>
+            <div><strong style="color: var(--brand);">Current Time:</strong> <span id="timestamp" style="color: var(--text);">Loading...</span></div>
+            <div><strong style="color: var(--brand);">Configuration Status:</strong> <span id="config-status" style="color: var(--text);">Loading...</span></div>
           </div>
+        </div>
+        
+        <div style="text-align: center; margin-top: 24px;">
+          <button id="release-close-btn" style="background: var(--brand); color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px;">Close</button>
         </div>
       </div>
     </div>
     
-    <div id="release-info-toggle" style="position: fixed; bottom: 20px; left: 20px; background: #f8f9fa; border: 1px solid #ddd; border-radius: 20px; padding: 8px 16px; cursor: pointer; font-size: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 1000;">
+    <div id="release-info-toggle" style="position: fixed; bottom: 20px; left: 20px; background: var(--brand); color: white; border: none; border-radius: 50px; padding: 12px 20px; cursor: pointer; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); z-index: 1000; transition: transform 0.2s ease;">
       📊 Release Info
     </div>
   `;
 }
 
 export function initReleaseInfo() {
+  // Store the startup time
+  window.__BOOKVERSE_STARTUP_TIME__ = Date.now();
+  
   // Add the release info to the page
   document.body.insertAdjacentHTML('beforeend', renderReleaseInfo());
   
   // Event listeners
   document.getElementById('release-info-toggle').addEventListener('click', showReleaseInfo);
   document.getElementById('close-release-info').addEventListener('click', hideReleaseInfo);
+  document.getElementById('release-close-btn').addEventListener('click', hideReleaseInfo);
   
   // Click outside to close
   document.getElementById('release-info-modal').addEventListener('click', (e) => {
@@ -61,12 +70,17 @@ export function initReleaseInfo() {
     }
   });
   
+  // Hover effect for toggle button
+  const toggle = document.getElementById('release-info-toggle');
+  toggle.addEventListener('mouseenter', () => toggle.style.transform = 'scale(1.05)');
+  toggle.addEventListener('mouseleave', () => toggle.style.transform = 'scale(1)');
+  
   // Load version information
   loadVersionInfo();
 }
 
 function showReleaseInfo() {
-  document.getElementById('release-info-modal').style.display = 'block';
+  document.getElementById('release-info-modal').style.display = 'flex';
   loadVersionInfo(); // Refresh data when opened
 }
 
@@ -77,16 +91,24 @@ function hideReleaseInfo() {
 async function loadVersionInfo() {
   const config = window.__BOOKVERSE_CONFIG__ || {};
   
+  // Calculate uptime
+  const startTime = window.__BOOKVERSE_STARTUP_TIME__ || Date.now();
+  const uptimeMs = Date.now() - startTime;
+  const uptimeMinutes = Math.floor(uptimeMs / 60000);
+  const uptimeSeconds = Math.floor((uptimeMs % 60000) / 1000);
+  const uptimeText = uptimeMinutes > 0 ? `${uptimeMinutes}m ${uptimeSeconds}s` : `${uptimeSeconds}s`;
+  
   // Web application info
-  document.getElementById('web-version').textContent = 'v2.1.0 (Circuit Breaker Removed)';
-  document.getElementById('web-image').textContent = 'bookverse-web:20-1';
+  document.getElementById('web-version').textContent = 'v2.2.0 (UI Improvements + Circuit Breaker Removed)';
+  document.getElementById('web-image').textContent = 'bookverse-web:latest';
   document.getElementById('web-env').textContent = config.env || 'UNKNOWN';
-  document.getElementById('web-build-date').textContent = new Date().toISOString().split('T')[0];
+  document.getElementById('version-changed').textContent = 'September 12, 2025 - Today';
   
   // System info
-  document.getElementById('user-agent').textContent = navigator.userAgent.split(' ').slice(0, 3).join(' ') + '...';
-  document.getElementById('timestamp').textContent = new Date().toISOString();
-  document.getElementById('config-status').textContent = config.inventoryBaseUrl ? 'Configured' : 'Missing URLs';
+  document.getElementById('uptime').textContent = uptimeText;
+  document.getElementById('user-agent').textContent = navigator.userAgent.split(' ').slice(-2).join(' ');
+  document.getElementById('timestamp').textContent = new Date().toLocaleString();
+  document.getElementById('config-status').textContent = config.inventoryBaseUrl ? '✅ All Services Configured' : '❌ Missing Service URLs';
   
   // Load backend service versions
   await loadBackendVersions(config);
