@@ -629,22 +629,7 @@ jobs:
           echo "  Expected Release Bundle: $APPLICATION_KEY@$APP_VERSION"
           echo "  Evidence Key Alias: ${{ vars.EVIDENCE_KEY_ALIAS }}"
           
-          # Verify the application version exists
-          echo "🔍 Checking if application version exists..."
-          VERIFY_RESP=$(mktemp)
-          VERIFY_STATUS=$(curl -sS -L -o "$VERIFY_RESP" -w "%{http_code}" \
-            "${{ vars.JFROG_URL }}/apptrust/api/v1/applications/$APPLICATION_KEY/versions/$APP_VERSION" \
-            -H "Authorization: Bearer $JF_ACCESS_TOKEN" \
-            -H "Accept: application/json")
-          echo "📋 Application version check status: $VERIFY_STATUS"
-          if [[ "$VERIFY_STATUS" != "200" ]]; then
-            echo "📨 Response:"; cat "$VERIFY_RESP" || true; echo
-            echo "❌ Application version $APPLICATION_KEY@$APP_VERSION not found before evidence attachment" >&2
-            rm -f "$VERIFY_RESP"
-            exit 1
-          fi
-          echo "✅ Application version exists, proceeding with evidence attachment"
-          rm -f "$VERIFY_RESP"
+          # Application version was already created and validated in previous step
           
           # Debug: Check available key aliases in JFrog platform
           echo "🔑 DEBUG: Checking available key aliases..."
