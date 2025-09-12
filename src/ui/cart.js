@@ -2,6 +2,7 @@ import { getCart, clearCart, removeFromCart } from '../store/cart.js'
 import { createOrder } from '../services/checkout.js'
 import { getBook } from '../services/inventory.js'
 import { navigateTo } from '../router.js'
+import { resolveImageUrl } from '../util/imageUrl.js'
 
 export async function renderCart(rootEl) {
   const cart = getCart()
@@ -160,7 +161,7 @@ function cartItemCard(item, book) {
   return `
   <div class="card" style="margin-bottom: 16px;">
     <div style="display: grid; grid-template-columns: 80px 1fr auto; gap: 16px; align-items: center;">
-      <img src="${book?.cover_image_url || ''}" alt="${book?.title || item.bookId}" 
+      <img src="${book?.cover_image_url ? resolveImageUrl(book.cover_image_url, window.__BOOKVERSE_CONFIG__.inventoryBaseUrl) : ''}" alt="${book?.title || item.bookId}" 
            style="width: 80px; height: 120px; object-fit: cover; border-radius: 8px;"/>
       <div>
         <h4 style="margin: 0 0 4px 0;">${book?.title || item.bookId}</h4>

@@ -2,6 +2,7 @@ import { listBooks } from '../services/inventory.js'
 import { getTrending } from '../services/recommendations.js'
 import { addToCart, removeFromCart, isInCart, getCart } from '../store/cart.js'
 import { navigateTo } from '../router.js'
+import { resolveImageUrl } from '../util/imageUrl.js'
 
 export function renderCatalog(rootEl) {
   rootEl.innerHTML = layout('Loading...')
@@ -246,7 +247,7 @@ export function renderCatalog(rootEl) {
               return book ? {
                 id: book.id,
                 title: book.title,
-                coverImageUrl: book.cover_image_url,
+                coverImageUrl: resolveImageUrl(book.cover_image_url, window.__BOOKVERSE_CONFIG__.inventoryBaseUrl),
                 rating: book.rating || 4.5,
                 reason: rec.reason,
                 price: book.price,
@@ -370,7 +371,7 @@ function card(book) {
   
   return `
   <article class="card book-card clickable" data-book-id="${book.id}">
-    <img class="cover" src="${book.cover_image_url}" alt="${escapeHtml(book.title)}" loading="lazy"/>
+    <img class="cover" src="${resolveImageUrl(book.cover_image_url, window.__BOOKVERSE_CONFIG__.inventoryBaseUrl)}" alt="${escapeHtml(book.title)}" loading="lazy"/>
     <h3 style="margin:8px 0 4px;">${escapeHtml(book.title)}</h3>
     <p class="muted" style="margin:0 0 4px;">${book.authors.join(', ')}</p>
     ${renderRating(rating)}
@@ -389,7 +390,7 @@ function trendingCard(book) {
   return `
   <article class="card trending-card clickable" data-book-id="${book.id}" style="position: relative;">
     <div style="position: absolute; top: 8px; right: 8px; background: var(--brand); color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 600;">✨ Recommended</div>
-    <img class="cover" src="${book.coverImageUrl || book.cover_image_url}" alt="${escapeHtml(book.title)}" loading="lazy"/>
+    <img class="cover" src="${book.coverImageUrl || resolveImageUrl(book.cover_image_url, window.__BOOKVERSE_CONFIG__.inventoryBaseUrl)}" alt="${escapeHtml(book.title)}" loading="lazy"/>
     <h4 style="margin:8px 0 4px; font-size: 14px;">${escapeHtml(book.title)}</h4>
     <p class="muted" style="margin:0 0 4px; font-size: 12px;">${book.authors?.join(', ') || 'Unknown Author'}</p>
     ${book.reason ? `<p style="margin:0 0 8px; font-size: 12px; color: var(--accent); font-style: italic;">${book.reason}</p>` : ''}

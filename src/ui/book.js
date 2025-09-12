@@ -1,6 +1,7 @@
 import { getBook } from '../services/inventory.js'
 import { addToCart, removeFromCart, isInCart, getCart } from '../store/cart.js'
 import { navigateTo } from '../router.js'
+import { resolveImageUrl } from '../util/imageUrl.js'
 
 export async function renderBook(rootEl, params) {
   const { id } = params
@@ -110,7 +111,7 @@ function layout(book) {
     
     <div style="display:grid; grid-template-columns: 300px 1fr; gap:32px; align-items: start;">
       <div>
-        <img src="${book.cover_image_url}" alt="${escapeHtml(book.title)}" style="width:100%; border-radius:12px; box-shadow: 0 8px 24px rgba(0,0,0,0.3);"/>
+        <img src="${resolveImageUrl(book.cover_image_url, window.__BOOKVERSE_CONFIG__.inventoryBaseUrl)}" alt="${escapeHtml(book.title)}" style="width:100%; border-radius:12px; box-shadow: 0 8px 24px rgba(0,0,0,0.3);"/>
       </div>
       <div>
         <h1 style="margin: 0 0 8px 0; font-size: 2.2em;">${escapeHtml(book.title)}</h1>
