@@ -57,8 +57,4 @@ export async function httpJson(service, path, opts = {}) {
   return res.json()
 }
 
-// Expose functions globally for debugging
-window.httpRequest = httpRequest
-window.httpJson = httpJson
-
 
