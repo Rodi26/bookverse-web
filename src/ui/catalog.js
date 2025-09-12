@@ -72,9 +72,17 @@ export function renderCatalog(rootEl) {
   }
 
   const bind = () => {
-    // Cart button
+    // Navigation buttons
     const cartBtn = rootEl.querySelector('#cart-btn')
-    if (cartBtn) cartBtn.onclick = () => navigateTo('/cart')
+    if (cartBtn) {
+      cartBtn.onclick = () => navigateTo('/cart')
+      updateCartButton()
+    }
+
+    const homeBtn = rootEl.querySelector('#home-btn')
+    if (homeBtn) {
+      homeBtn.onclick = () => navigateTo('/')
+    }
 
     // Search functionality
     const searchBtn = rootEl.querySelector('#search-btn')
@@ -89,6 +97,28 @@ export function renderCatalog(rootEl) {
           state.query = searchInput.value.trim()
           performSearch()
         }
+      }
+      // Clear search on input change if empty
+      searchInput.oninput = (e) => {
+        const clearBtn = rootEl.querySelector('#clear-search-btn')
+        if (!e.target.value.trim()) {
+          state.query = ''
+          if (clearBtn) clearBtn.style.display = 'none'
+          performSearch()
+        } else {
+          if (clearBtn) clearBtn.style.display = 'inline-block'
+        }
+      }
+    }
+
+    // Clear search button
+    const clearSearchBtn = rootEl.querySelector('#clear-search-btn')
+    if (clearSearchBtn) {
+      clearSearchBtn.onclick = () => {
+        if (searchInput) searchInput.value = ''
+        state.query = ''
+        clearSearchBtn.style.display = 'none'
+        performSearch()
       }
     }
 
@@ -188,25 +218,34 @@ export function renderCatalog(rootEl) {
       trendingContainer.innerHTML = '<div class="loading">Loading trending books...</div>'
       
       try {
-        // If recommendations service isn't available, show popular books from our catalog
+        // Show 3 curated book recommendations
         let trendingBooks = []
         try {
-          const trendingData = await getTrending(8)
+          const trendingData = await getTrending(3)
           trendingBooks = trendingData.recommendations || []
         } catch (e) {
-          // Fallback: show highest rated books from our catalog
-          trendingBooks = allBooks
-            .filter(book => book.rating && book.rating >= 4.0)
-            .sort((a, b) => (b.rating || 0) - (a.rating || 0))
-            .slice(0, 8)
-            .map(book => ({
-              id: book.id,
-              title: book.title,
-              coverImageUrl: book.cover_image_url,
-              rating: book.rating,
-              price: book.price,
-              authors: book.authors
-            }))
+          // Fallback: show 3 curated recommendations
+          const curatedRecommendations = [
+            { title: "The Lord of the Rings", reason: "Epic fantasy adventure" },
+            { title: "1984", reason: "Dystopian masterpiece" },
+            { title: "The Martian", reason: "Sci-fi survival thriller" }
+          ]
+          
+          trendingBooks = curatedRecommendations
+            .map(rec => {
+              const book = allBooks.find(b => b.title === rec.title)
+              return book ? {
+                id: book.id,
+                title: book.title,
+                coverImageUrl: book.cover_image_url,
+                rating: book.rating || 4.5,
+                reason: rec.reason,
+                price: book.price,
+                authors: book.authors
+              } : null
+            })
+            .filter(Boolean)
+            .slice(0, 3)
         }
         
         if (trendingBooks.length > 0) {
@@ -259,22 +298,30 @@ export function renderCatalog(rootEl) {
 function layout(content, hasMore = false) {
   return `
   <main class="container">
-    <button id="cart-btn" class="cart-btn">Cart</button>
+    <nav class="global-nav">
+      <div class="nav-brand">📚 BookVerse</div>
+      <div class="nav-links">
+        <button id="home-btn" class="nav-btn">Home</button>
+        <button id="recommendations-btn" class="nav-btn">Recommendations</button>
+        <button id="cart-btn" class="nav-btn cart-btn">Cart</button>
+      </div>
+    </nav>
     
     <div class="banner">
-      <h1>📚 BookVerse</h1>
-      <p>Discover your next favorite book from our curated collection</p>
+      <h1>Discover your next favorite book</h1>
+      <p>From our curated collection of 45 amazing titles</p>
     </div>
     
     <div class="search-container">
       <input id="search-input" class="search-input" placeholder="Search books, authors, or genres..." />
       <button id="search-btn" class="search-btn">Search</button>
-      <button id="recommendations-btn" class="btn secondary" style="margin-left: 8px;">✨ Trending</button>
+      <button id="clear-search-btn" class="btn secondary" style="margin-left: 8px; display: none;">Clear</button>
     </div>
     
     <div id="recommendations-section" style="display: none; margin: 16px 0;">
       <div class="card">
-        <h3 style="margin: 0 0 16px 0; color: var(--brand);">🔥 Trending Books</h3>
+        <h3 style="margin: 0 0 16px 0; color: var(--brand);">📖 Recommended for You</h3>
+        <p style="margin: 0 0 16px 0; color: var(--muted);">3 books we think you'll love</p>
         <div id="trending-books" class="grid cols-auto"></div>
       </div>
     </div>
@@ -332,10 +379,11 @@ function trendingCard(book) {
   
   return `
   <article class="card trending-card clickable" data-book-id="${book.id}" style="position: relative;">
-    <div style="position: absolute; top: 8px; right: 8px; background: var(--accent); color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 600;">🔥 Trending</div>
+    <div style="position: absolute; top: 8px; right: 8px; background: var(--brand); color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 600;">✨ Recommended</div>
     <img class="cover" src="${book.coverImageUrl || book.cover_image_url}" alt="${escapeHtml(book.title)}" loading="lazy"/>
     <h4 style="margin:8px 0 4px; font-size: 14px;">${escapeHtml(book.title)}</h4>
     <p class="muted" style="margin:0 0 4px; font-size: 12px;">${book.authors?.join(', ') || 'Unknown Author'}</p>
+    ${book.reason ? `<p style="margin:0 0 8px; font-size: 12px; color: var(--accent); font-style: italic;">${book.reason}</p>` : ''}
     ${renderRating(rating)}
     <div class="price" style="font-size: 16px;">$${price.toFixed(2)}</div>
     <div class="row" style="justify-content:center; margin-top: 8px;">

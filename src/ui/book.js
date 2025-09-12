@@ -15,17 +15,29 @@ export async function renderBook(rootEl, params) {
 }
 
 function bind(book) {
-  const backBtn = document.querySelector('#back-btn')
+  const homeBtn = document.querySelector('#home-btn')
   const cartBtn = document.querySelector('#cart-btn')
+  const recsBtn = document.querySelector('#recommendations-btn')
   const addBtn = document.querySelector('#add')
   
-  if (backBtn) {
-    backBtn.onclick = () => navigateTo('/')
+  if (homeBtn) {
+    homeBtn.onclick = () => navigateTo('/')
   }
   
   if (cartBtn) {
     cartBtn.onclick = () => navigateTo('/cart')
     updateCartCount()
+  }
+
+  if (recsBtn) {
+    recsBtn.onclick = () => {
+      navigateTo('/')
+      // Trigger recommendations after navigation
+      setTimeout(() => {
+        const recommendationsBtn = document.querySelector('#recommendations-btn')
+        if (recommendationsBtn) recommendationsBtn.click()
+      }, 100)
+    }
   }
   
   if (addBtn) {
@@ -87,11 +99,14 @@ function layout(book) {
   const rating = book.rating || 0
   return `
   <main class="container">
-    <button id="cart-btn" class="cart-btn">Cart</button>
-    
-    <div style="margin-bottom: 20px;">
-      <button id="back-btn" class="btn secondary">← Back to Catalog</button>
-    </div>
+    <nav class="global-nav">
+      <div class="nav-brand">📚 BookVerse</div>
+      <div class="nav-links">
+        <button id="home-btn" class="nav-btn">Home</button>
+        <button id="recommendations-btn" class="nav-btn">Recommendations</button>
+        <button id="cart-btn" class="nav-btn cart-btn">Cart</button>
+      </div>
+    </nav>
     
     <div style="display:grid; grid-template-columns: 300px 1fr; gap:32px; align-items: start;">
       <div>
