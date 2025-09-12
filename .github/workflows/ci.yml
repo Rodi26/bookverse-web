@@ -514,15 +514,36 @@ jobs:
           if ! command -v jq >/dev/null 2>&1; then sudo apt-get update -y && sudo apt-get install -y jq >/dev/null; fi
 
           # Preflight: ensure the application exists; create if 404
-          echo "🔍 Preflight: ensuring application '$APPLICATION_KEY' exists"
-          if ! jf curl -H "X-JFrog-Project: ${{ vars.PROJECT_KEY }}" -H "Accept: application/json" "/apptrust/api/v1/applications/$APPLICATION_KEY" >/dev/null 2>&1; then
+          echo "🔍 DEBUG: Preflight check for application '$APPLICATION_KEY'"
+          echo "  PROJECT_KEY: ${{ vars.PROJECT_KEY }}"
+          echo "  JF_ACCESS_TOKEN: ${JF_ACCESS_TOKEN:0:20}..." 
+          
+          # Check if application exists
+          APP_CHECK_RESP=$(mktemp)
+          APP_CHECK_STATUS=$(jf curl -H "X-JFrog-Project: ${{ vars.PROJECT_KEY }}" -H "Accept: application/json" "/apptrust/api/v1/applications/$APPLICATION_KEY" -w "%{http_code}" -o "$APP_CHECK_RESP" 2>/dev/null || echo "000")
+          echo "📋 Application check status: $APP_CHECK_STATUS"
+          if [[ "$APP_CHECK_STATUS" != "200" ]]; then
+            echo "📨 Application check response:"; cat "$APP_CHECK_RESP" || true; echo
             echo "🆕 Application not found; creating it"
             CREATE_APP_BODY=$(jq -n --arg name "BookVerse Web" --arg key "$APPLICATION_KEY" --arg proj "${{ vars.PROJECT_KEY }}" '{application_name:$name, application_key:$key, project_key:$proj}')
-            jf curl -X POST -H "X-JFrog-Project: ${{ vars.PROJECT_KEY }}" -H "Content-Type: application/json" -H "Accept: application/json" -d "$CREATE_APP_BODY" "/apptrust/api/v1/applications/" >/tmp/app_create.json 2>/tmp/app_create.err || true
-            echo "📨 Create Application Response:"; cat /tmp/app_create.json || true
+            echo "📝 Create app payload: $CREATE_APP_BODY"
+            CREATE_RESP=$(mktemp)
+            CREATE_STATUS=$(jf curl -X POST -H "X-JFrog-Project: ${{ vars.PROJECT_KEY }}" -H "Content-Type: application/json" -H "Accept: application/json" -d "$CREATE_APP_BODY" "/apptrust/api/v1/applications/" -w "%{http_code}" -o "$CREATE_RESP" 2>/dev/null || echo "000")
+            echo "📨 Create Application Status: $CREATE_STATUS"
+            echo "📨 Create Application Response:"; cat "$CREATE_RESP" || true; echo
+            rm -f "$CREATE_RESP"
+          else
+            echo "✅ Application exists"
           fi
+          rm -f "$APP_CHECK_RESP"
 
           # Create application version via AppTrust API using admin token (align with recommendations)
+          echo "🚀 DEBUG: Creating application version"
+          echo "  APPLICATION_KEY: $APPLICATION_KEY"
+          echo "  APP_VERSION: $APP_VERSION"
+          echo "  URL: ${{ vars.JFROG_URL }}/apptrust/api/v1/applications/$APPLICATION_KEY/versions?async=false"
+          echo "  PROJECT_KEY: ${{ vars.PROJECT_KEY }}"
+          
           RESP_BODY=$(mktemp)
           HTTP_STATUS=$(curl -sS -L -o "$RESP_BODY" -w "%{http_code}" -X POST \
             "${{ vars.JFROG_URL }}/apptrust/api/v1/applications/$APPLICATION_KEY/versions?async=false" \
@@ -600,6 +621,52 @@ jobs:
           EVIDENCE_PRIVATE_KEY: ${{ secrets.EVIDENCE_PRIVATE_KEY }}
         run: |
           set -euo pipefail
+          
+          # Debug: Verify the application version exists before attaching evidence
+          echo "🔍 DEBUG: Verifying release bundle exists for evidence attachment"
+          echo "  Application Key: $APPLICATION_KEY"
+          echo "  App Version: $APP_VERSION"
+          echo "  Expected Release Bundle: $APPLICATION_KEY@$APP_VERSION"
+          echo "  Evidence Key Alias: ${{ vars.EVIDENCE_KEY_ALIAS }}"
+          
+          # Verify the application version exists
+          echo "🔍 Checking if application version exists..."
+          VERIFY_RESP=$(mktemp)
+          VERIFY_STATUS=$(curl -sS -L -o "$VERIFY_RESP" -w "%{http_code}" \
+            "${{ vars.JFROG_URL }}/apptrust/api/v1/applications/$APPLICATION_KEY/versions/$APP_VERSION" \
+            -H "Authorization: Bearer $JF_ACCESS_TOKEN" \
+            -H "Accept: application/json")
+          echo "📋 Application version check status: $VERIFY_STATUS"
+          if [[ "$VERIFY_STATUS" != "200" ]]; then
+            echo "📨 Response:"; cat "$VERIFY_RESP" || true; echo
+            echo "❌ Application version $APPLICATION_KEY@$APP_VERSION not found before evidence attachment" >&2
+            rm -f "$VERIFY_RESP"
+            exit 1
+          fi
+          echo "✅ Application version exists, proceeding with evidence attachment"
+          rm -f "$VERIFY_RESP"
+          
+          # Debug: Check available key aliases in JFrog platform
+          echo "🔑 DEBUG: Checking available key aliases..."
+          KEY_LIST_RESP=$(mktemp)
+          KEY_LIST_STATUS=$(curl -sS -L -o "$KEY_LIST_RESP" -w "%{http_code}" \
+            "${{ vars.JFROG_URL }}/access/api/v1/keys" \
+            -H "Authorization: Bearer $JF_ACCESS_TOKEN" \
+            -H "Accept: application/json")
+          echo "📋 Key list status: $KEY_LIST_STATUS"
+          if [[ "$KEY_LIST_STATUS" == "200" ]]; then
+            echo "📊 Available key aliases:"
+            cat "$KEY_LIST_RESP" | jq -r '.keys[]?.alias // empty' || echo "No aliases found or jq failed"
+            echo "🔍 Looking for alias: ${{ vars.EVIDENCE_KEY_ALIAS }}"
+            if cat "$KEY_LIST_RESP" | jq -r '.keys[]?.alias // empty' | grep -q "^${{ vars.EVIDENCE_KEY_ALIAS }}$"; then
+              echo "✅ Key alias found in platform"
+            else
+              echo "❌ Key alias NOT found in platform"
+            fi
+          else
+            echo "📨 Key list response:"; cat "$KEY_LIST_RESP" || true; echo
+          fi
+          rm -f "$KEY_LIST_RESP"
           if ! command -v envsubst >/dev/null 2>&1; then sudo apt-get update -y && sudo apt-get install -y gettext-base; fi
           NOW_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           export NOW_TS="${NOW_TS}"
@@ -616,15 +683,32 @@ jobs:
           }
           JSON
           envsubst < slsa.template.md > slsa.md
-          jf evd create-evidence \
+          # Test evidence creation WITHOUT key-alias first
+          echo "🧪 TEST 1: Evidence creation WITHOUT key-alias"
+          if jf evd create-evidence \
             --predicate slsa.json \
             --markdown slsa.md \
             --predicate-type "https://slsa.dev/provenance/v1" \
             --release-bundle "$APPLICATION_KEY" \
             --release-bundle-version "$APP_VERSION" \
             --project "${{ vars.PROJECT_KEY }}" \
-            --key "${{ secrets.EVIDENCE_PRIVATE_KEY }}" \
-            --key-alias "${{ vars.EVIDENCE_KEY_ALIAS }}"
+            --key "${{ secrets.EVIDENCE_PRIVATE_KEY }}"; then
+            echo "✅ Evidence creation WITHOUT key-alias: SUCCESS"
+          else
+            echo "❌ Evidence creation WITHOUT key-alias: FAILED"
+            
+            # Test WITH key-alias if without fails
+            echo "🧪 TEST 2: Evidence creation WITH key-alias"
+            jf evd create-evidence \
+              --predicate slsa.json \
+              --markdown slsa.md \
+              --predicate-type "https://slsa.dev/provenance/v1" \
+              --release-bundle "$APPLICATION_KEY" \
+              --release-bundle-version "$APP_VERSION" \
+              --project "${{ vars.PROJECT_KEY }}" \
+              --key "${{ secrets.EVIDENCE_PRIVATE_KEY }}" \
+              --key-alias "${{ vars.EVIDENCE_KEY_ALIAS }}"
+          fi
 
           # Jira predicate and markdown
           # Generate a small set of pseudo tickets and types for the release notes
@@ -648,6 +732,8 @@ jobs:
           }
           JSON
           envsubst < jira.template.md > jira.md
+          # Only run Jira evidence if SLSA succeeded
+          echo "🧪 Creating Jira evidence (using same approach as SLSA)"
           jf evd create-evidence \
             --predicate jira.json \
             --markdown jira.md \
@@ -655,8 +741,7 @@ jobs:
             --release-bundle "$APPLICATION_KEY" \
             --release-bundle-version "$APP_VERSION" \
             --project "${{ vars.PROJECT_KEY }}" \
-            --key "${{ secrets.EVIDENCE_PRIVATE_KEY }}" \
-            --key-alias "${{ vars.EVIDENCE_KEY_ALIAS }}"
+            --key "${{ secrets.EVIDENCE_PRIVATE_KEY }}"
 
       - name: "[Evidence] Attach SDLC"
         env:
