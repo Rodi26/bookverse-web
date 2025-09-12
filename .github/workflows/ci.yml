@@ -630,37 +630,6 @@ jobs:
           EVIDENCE_PRIVATE_KEY: ${{ secrets.EVIDENCE_PRIVATE_KEY }}
         run: |
           set -euo pipefail
-          
-          # Debug: Verify the application version exists before attaching evidence
-          echo "🔍 DEBUG: Verifying release bundle exists for evidence attachment"
-          echo "  Application Key: $APPLICATION_KEY"
-          echo "  App Version: $APP_VERSION"
-          echo "  Expected Release Bundle: $APPLICATION_KEY@$APP_VERSION"
-          echo "  Evidence Key Alias: ${{ vars.EVIDENCE_KEY_ALIAS }}"
-          
-          # Application version was already created and validated in previous step
-          
-          # Debug: Check available key aliases in JFrog platform
-          echo "🔑 DEBUG: Checking available key aliases..."
-          KEY_LIST_RESP=$(mktemp)
-          KEY_LIST_STATUS=$(curl -sS -L -o "$KEY_LIST_RESP" -w "%{http_code}" \
-            "${{ vars.JFROG_URL }}/access/api/v1/keys" \
-            -H "Authorization: Bearer $JF_ACCESS_TOKEN" \
-            -H "Accept: application/json")
-          echo "📋 Key list status: $KEY_LIST_STATUS"
-          if [[ "$KEY_LIST_STATUS" == "200" ]]; then
-            echo "📊 Available key aliases:"
-            cat "$KEY_LIST_RESP" | jq -r '.keys[]?.alias // empty' || echo "No aliases found or jq failed"
-            echo "🔍 Looking for alias: ${{ vars.EVIDENCE_KEY_ALIAS }}"
-            if cat "$KEY_LIST_RESP" | jq -r '.keys[]?.alias // empty' | grep -q "^${{ vars.EVIDENCE_KEY_ALIAS }}$"; then
-              echo "✅ Key alias found in platform"
-            else
-              echo "❌ Key alias NOT found in platform"
-            fi
-          else
-            echo "📨 Key list response:"; cat "$KEY_LIST_RESP" || true; echo
-          fi
-          rm -f "$KEY_LIST_RESP"
           if ! command -v envsubst >/dev/null 2>&1; then sudo apt-get update -y && sudo apt-get install -y gettext-base; fi
           NOW_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           export NOW_TS="${NOW_TS}"
@@ -677,32 +646,14 @@ jobs:
           }
           JSON
           envsubst < slsa.template.md > slsa.md
-          # Test evidence creation WITHOUT key-alias first
-          echo "🧪 TEST 1: Evidence creation WITHOUT key-alias"
-          if jf evd create-evidence \
+          jf evd create-evidence \
             --predicate slsa.json \
             --markdown slsa.md \
             --predicate-type "https://slsa.dev/provenance/v1" \
             --release-bundle "$APPLICATION_KEY" \
             --release-bundle-version "$APP_VERSION" \
             --project "${{ vars.PROJECT_KEY }}" \
-            --key "${{ secrets.EVIDENCE_PRIVATE_KEY }}"; then
-            echo "✅ Evidence creation WITHOUT key-alias: SUCCESS"
-          else
-            echo "❌ Evidence creation WITHOUT key-alias: FAILED"
-            
-            # Test WITH key-alias if without fails
-            echo "🧪 TEST 2: Evidence creation WITH key-alias"
-            jf evd create-evidence \
-              --predicate slsa.json \
-              --markdown slsa.md \
-              --predicate-type "https://slsa.dev/provenance/v1" \
-              --release-bundle "$APPLICATION_KEY" \
-              --release-bundle-version "$APP_VERSION" \
-              --project "${{ vars.PROJECT_KEY }}" \
-              --key "${{ secrets.EVIDENCE_PRIVATE_KEY }}" \
-              --key-alias "${{ vars.EVIDENCE_KEY_ALIAS }}"
-          fi
+            --key "${{ secrets.EVIDENCE_PRIVATE_KEY }}"
 
           # Jira predicate and markdown
           # Generate a small set of pseudo tickets and types for the release notes
@@ -726,8 +677,6 @@ jobs:
           }
           JSON
           envsubst < jira.template.md > jira.md
-          # Only run Jira evidence if SLSA succeeded
-          echo "🧪 Creating Jira evidence (using same approach as SLSA)"
           jf evd create-evidence \
             --predicate jira.json \
             --markdown jira.md \
