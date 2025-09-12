@@ -536,7 +536,6 @@ jobs:
           if ! command -v jq >/dev/null 2>&1; then sudo apt-get update -y && sudo apt-get install -y jq >/dev/null; fi
 
           # Preflight: ensure the application exists; create if 404
-          echo "🔍 DEBUG: Preflight check for application '$APPLICATION_KEY'"
           echo "  PROJECT_KEY: ${{ vars.PROJECT_KEY }}"
           echo "  JF_ACCESS_TOKEN: ${JF_ACCESS_TOKEN:0:20}..." 
           
@@ -560,7 +559,6 @@ jobs:
           rm -f "$APP_CHECK_RESP"
 
           # Create application version via AppTrust API using admin token (align with recommendations)
-          echo "🚀 DEBUG: Creating application version"
           echo "  APPLICATION_KEY: $APPLICATION_KEY"
           echo "  APP_VERSION: $APP_VERSION"
           echo "  URL: ${{ vars.JFROG_URL }}/apptrust/api/v1/applications/$APPLICATION_KEY/versions?async=false"

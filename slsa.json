@@ -1,0 +1,9 @@
+{
+  "provenance": {
+    "framework": "SLSA",
+    "level": "v1",
+    "generatedAt": "2025-09-12T09:20:26Z",
+    "attachStage": "UNASSIGNED",
+    "gateForPromotionTo": "DEV"
+  }
+}
