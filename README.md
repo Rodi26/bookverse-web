@@ -79,7 +79,6 @@ CHECKOUT_BASE_URL=http://localhost:8002
 
 ### Required repository secrets
 
-- `JFROG_ACCESS_TOKEN`: Access token used by CI to interact with JFrog Platform
 - `EVIDENCE_PRIVATE_KEY`: Private key PEM for evidence signing (mandatory)
 
 ### Mandatory OIDC application binding (.jfrog/config.yml)

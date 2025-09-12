@@ -116,10 +116,10 @@ async function loadVersionInfo() {
 
 async function loadBackendVersions(config) {
   const services = [
-    { id: 'platform-version', name: 'Platform', url: config.platformBaseUrl || 'http://localhost:8080' },
-    { id: 'inventory-version', name: 'Inventory', url: config.inventoryBaseUrl },
-    { id: 'recommendations-version', name: 'Recommendations', url: config.recommendationsBaseUrl },
-    { id: 'checkout-version', name: 'Checkout', url: config.checkoutBaseUrl }
+    { id: 'platform-version', name: 'Platform', url: 'http://localhost:8080', healthPath: '/health' },
+    { id: 'inventory-version', name: 'Inventory', url: config.inventoryBaseUrl, healthPath: '/health' },
+    { id: 'recommendations-version', name: 'Recommendations', url: config.recommendationsBaseUrl, healthPath: '/health' },
+    { id: 'checkout-version', name: 'Checkout', url: config.checkoutBaseUrl, healthPath: '/health' }
   ];
   
   for (const service of services) {
@@ -130,22 +130,43 @@ async function loadBackendVersions(config) {
       }
       
       // Try to get version from health endpoint
-      const healthUrl = service.url.includes('health') ? service.url : `${service.url}/health`;
+      const healthUrl = `${service.url}${service.healthPath}`;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      
       const response = await fetch(healthUrl, { 
         method: 'GET',
         headers: { 'Accept': 'application/json' },
-        timeout: 3000 
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       
       if (response.ok) {
         const data = await response.json();
-        const version = data.version || data.build_version || 'Online';
+        let version = 'Online';
+        
+        // Extract version from different possible fields
+        if (data.version) {
+          version = data.version;
+        } else if (data.build_version) {
+          version = data.build_version;
+        } else if (data.service) {
+          version = `${data.service} - ${data.status || 'Running'}`;
+        } else if (data.status) {
+          version = `${data.status === 'ok' || data.status === 'healthy' ? '✅' : '⚠️'} ${data.status}`;
+        }
+        
         document.getElementById(service.id).textContent = version;
       } else {
         document.getElementById(service.id).textContent = `HTTP ${response.status}`;
       }
     } catch (error) {
-      document.getElementById(service.id).textContent = 'Unavailable';
+      if (error.name === 'AbortError') {
+        document.getElementById(service.id).textContent = 'Timeout';
+      } else {
+        document.getElementById(service.id).textContent = 'Connection Failed';
+      }
     }
   }
 }

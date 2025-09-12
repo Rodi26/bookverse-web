@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    argocd.argoproj.io/tracking-id: platform-prod:apps/Deployment:bookverse-prod/platform-web
+    deployment.kubernetes.io/revision: "5"
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"apps/v1","kind":"Deployment","metadata":{"annotations":{"argocd.argoproj.io/tracking-id":"platform-prod:apps/Deployment:bookverse-prod/platform-web"},"name":"platform-web","namespace":"bookverse-prod"},"spec":{"replicas":1,"selector":{"matchLabels":{"app":"platform-web"}},"template":{"metadata":{"labels":{"app":"platform-web"}},"spec":{"containers":[{"env":[{"name":"BOOKVERSE_ENV","value":"DEV"},{"name":"INVENTORY_BASE_URL","value":"http://inventory"},{"name":"RECOMMENDATIONS_BASE_URL","value":"http://recommendations"},{"name":"CHECKOUT_BASE_URL","value":"http://checkout"}],"image":"apptrustswampupc.jfrog.io/bookverse-web-internal-docker-release-local/web:22-1","livenessProbe":{"httpGet":{"path":"/","port":8080},"initialDelaySeconds":15,"periodSeconds":20},"name":"web","ports":[{"containerPort":8080}],"readinessProbe":{"httpGet":{"path":"/","port":8080},"initialDelaySeconds":5,"periodSeconds":10}}]}}}}
+  creationTimestamp: "2025-09-12T14:38:28Z"
+  generation: 5
+  name: platform-web
+  namespace: bookverse-prod
+  resourceVersion: "1106298"
+  uid: 80017c2f-7bc5-4a56-8890-9c6709eb3a55
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: platform-web
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/restartedAt: "2025-09-12T18:04:01+03:00"
+      creationTimestamp: null
+      labels:
+        app: platform-web
+    spec:
+      containers:
+      - env:
+        - name: BOOKVERSE_ENV
+          value: DEV
+        - name: INVENTORY_BASE_URL
+          value: http://inventory
+        - name: RECOMMENDATIONS_BASE_URL
+          value: http://recommendations
+        - name: CHECKOUT_BASE_URL
+          value: http://checkout
+        image: apptrustswampupc.jfrog.io/bookverse-web-internal-docker-release-local/web:22-1
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 15
+          periodSeconds: 20
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: web
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+status:
+  availableReplicas: 1
+  conditions:
+  - lastTransitionTime: "2025-09-12T14:45:56Z"
+    lastUpdateTime: "2025-09-12T14:45:56Z"
+    message: Deployment has minimum availability.
+    reason: MinimumReplicasAvailable
+    status: "True"
+    type: Available
+  - lastTransitionTime: "2025-09-12T14:38:28Z"
+    lastUpdateTime: "2025-09-12T15:10:01Z"
+    message: ReplicaSet "platform-web-588b855759" has successfully progressed.
+    reason: NewReplicaSetAvailable
+    status: "True"
+    type: Progressing
+  observedGeneration: 5
+  readyReplicas: 1
+  replicas: 1
+  updatedReplicas: 1
