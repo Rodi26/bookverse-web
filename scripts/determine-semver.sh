@@ -11,7 +11,7 @@ set -euo pipefail
 #   ./determine-semver.sh --application-key bookverse-web \
 #                        --version-map ./config/version-map.yaml \
 #                        --jfrog-url "$JFROG_URL" \
-#                        --jfrog-token "$JF_ACCESS_TOKEN" \
+#                        --jfrog-token "$JF_ACCESS_TOKEN" \  # Optional with OIDC
 #                        --project-key "$PROJECT_KEY" \
 #                        --packages "web,web-assets.tar.gz"
 #
@@ -48,7 +48,7 @@ fi
 APPLICATION_KEY=""
 VERSION_MAP=""
 JFROG_URL=""
-JFROG_TOKEN=""
+JFROG_TOKEN=""  # Optional when using OIDC authentication
 PROJECT_KEY=""
 PACKAGES=""
 VERBOSE=false
@@ -91,7 +91,7 @@ while [[ $# -gt 0 ]]; do
             echo "  --application-key KEY    Application key (e.g., bookverse-web)"
             echo "  --version-map PATH       Path to version-map.yaml file"
             echo "  --jfrog-url URL         JFrog platform URL"
-            echo "  --jfrog-token TOKEN     JFrog access token"
+            echo "  --jfrog-token TOKEN     JFrog access token (optional with OIDC)"
             echo ""
             echo "Optional arguments:"
             echo "  --project-key KEY       Project key (default: bookverse)"
@@ -124,9 +124,10 @@ if [[ -z "$JFROG_URL" ]]; then
     exit 1
 fi
 
-if [[ -z "$JFROG_TOKEN" ]]; then
-    echo "❌ Error: --jfrog-token is required" >&2
-    exit 1
+# Token is optional when using OIDC - check if we have either token or OIDC env
+if [[ -z "$JFROG_TOKEN" && -z "${JF_ACCESS_TOKEN:-}" ]]; then
+    echo "⚠️  Warning: No JFrog token provided. This may fail if OIDC authentication is not properly configured." >&2
+    echo "    Either provide --jfrog-token or ensure JF_ACCESS_TOKEN environment variable is set by OIDC workflow." >&2
 fi
 
 if [[ ! -f "$VERSION_MAP" ]]; then

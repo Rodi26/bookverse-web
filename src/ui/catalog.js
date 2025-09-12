@@ -3,8 +3,30 @@ import { getTrending } from '../services/recommendations.js'
 import { addToCart, removeFromCart, isInCart, getCart } from '../store/cart.js'
 import { navigateTo } from '../router.js'
 import { resolveImageUrl } from '../util/imageUrl.js'
+import { renderAuthStatus } from './auth.js'
+
+import authService from '../services/auth.js'
 
 export function renderCatalog(rootEl) {
+  // Check authentication status
+  if (!authService.isAuthenticated()) {
+    rootEl.innerHTML = `
+      <div class="auth-required">
+        <div class="auth-card">
+          <h2>Authentication Required</h2>
+          <p>Please sign in to access the BookVerse catalog.</p>
+          <button id="auth-login-redirect-btn" class="login-button">Sign In</button>
+        </div>
+      </div>
+    `
+    
+    // Add click handler for sign in button
+    document.getElementById('auth-login-redirect-btn')?.addEventListener('click', () => {
+      navigateTo('/login')
+    })
+    return
+  }
+  
   rootEl.innerHTML = layout('Loading...')
   let allBooks = []
   let filteredBooks = []
@@ -16,7 +38,7 @@ export function renderCatalog(rootEl) {
   // Load all books at once
   const loadAllBooks = async () => {
     try {
-      console.log('🔍 CATALOG: Starting book loading...');
+      // Debug: Starting book loading
       
       // Load multiple pages to get all books
       let allData = []
@@ -24,16 +46,16 @@ export function renderCatalog(rootEl) {
       let hasMore = true
       
       while (hasMore) {
-        console.log(`🔍 CATALOG: Loading page ${page}...`);
+        // Debug: Loading page ${page}
         const data = await listBooks(page, 50) // Load 50 per page
-        console.log(`🔍 CATALOG: Page ${page} loaded:`, data.books?.length, 'books');
+        // Debug: Page ${page} loaded: ${data.books?.length} books
         
         allData = allData.concat(data.books || [])
         hasMore = data.pagination && page < data.pagination.pages
         page++
       }
       
-      console.log('✅ CATALOG: All books loaded:', allData.length, 'total books');
+      // Debug: All books loaded: ${allData.length} total books
       
       allBooks = allData
       filteredBooks = allBooks
@@ -138,16 +160,13 @@ export function renderCatalog(rootEl) {
       recsBtn.onclick = () => toggleRecommendations()
     }
 
-    // Load more on scroll
-    const scrollContainer = rootEl.querySelector('.scroll-container')
-    if (scrollContainer) {
-      scrollContainer.onscroll = () => {
-        const { scrollTop, scrollHeight, clientHeight } = scrollContainer
-        if (scrollTop + clientHeight >= scrollHeight - 100) {
-          if (displayedBooks.length < filteredBooks.length) {
-            loadMoreBooks()
-            updateDisplay()
-          }
+    // Load more on scroll (using window scroll instead of container scroll)
+    window.onscroll = () => {
+      const { scrollY, scrollHeight, innerHeight } = window
+      if (scrollY + innerHeight >= document.body.scrollHeight - 100) {
+        if (displayedBooks.length < filteredBooks.length) {
+          loadMoreBooks()
+          updateDisplay()
         }
       }
     }
@@ -215,92 +234,57 @@ export function renderCatalog(rootEl) {
   }
 
   const toggleRecommendations = async () => {
-    const recsSection = rootEl.querySelector('#recommendations-section')
     const recsBtn = rootEl.querySelector('#recommendations-btn')
     
-    if (recsSection.style.display === 'none') {
-      // Show recommendations
-      recsSection.style.display = 'block'
-      recsBtn.textContent = '❌ Hide Trending'
-      
-      // Load trending books
-      const trendingContainer = rootEl.querySelector('#trending-books')
-      trendingContainer.innerHTML = '<div class="loading">Loading trending books...</div>'
+    // Check if currently showing trending
+    if (recsBtn.textContent.includes('Show All')) {
+      // Switch back to showing all books
+      filteredBooks = allBooks
+      recsBtn.textContent = '✨ Trending'
+      displayedBooks = []
+      currentBatch = 0
+      loadMoreBooks()
+      updateDisplay()
+    } else {
+      // Filter to show only trending books
+      recsBtn.textContent = '📚 Show All Books'
       
       try {
-        // Show 3 curated book recommendations
-        let trendingBooks = []
+        // Get trending book titles
+        let trendingTitles = []
         try {
           const trendingData = await getTrending(3)
-          trendingBooks = trendingData.recommendations || []
+          trendingTitles = (trendingData.recommendations || []).map(r => r.title)
         } catch (e) {
-          // Fallback: show 3 curated recommendations
-          const curatedRecommendations = [
-            { title: "The Lord of the Rings", reason: "Epic fantasy adventure" },
-            { title: "1984", reason: "Dystopian masterpiece" },
-            { title: "The Martian", reason: "Sci-fi survival thriller" }
-          ]
-          
-          trendingBooks = curatedRecommendations
-            .map(rec => {
-              const book = allBooks.find(b => b.title === rec.title)
-              return book ? {
-                id: book.id,
-                title: book.title,
-                coverImageUrl: resolveImageUrl(book.cover_image_url, window.__BOOKVERSE_CONFIG__.inventoryBaseUrl),
-                rating: book.rating || 4.5,
-                reason: rec.reason,
-                price: book.price,
-                authors: book.authors
-              } : null
-            })
-            .filter(Boolean)
-            .slice(0, 3)
+          // Fallback: use curated trending titles
+          trendingTitles = ["The Lord of the Rings", "1984", "The Martian"]
         }
         
-        if (trendingBooks.length > 0) {
-          trendingContainer.innerHTML = trendingBooks.map(book => trendingCard(book)).join('')
-          bindTrendingCards()
-        } else {
-          trendingContainer.innerHTML = '<p class="muted">No trending books available at the moment.</p>'
-        }
+        // Filter main catalog to only show trending books
+        filteredBooks = allBooks.filter(book => 
+          trendingTitles.includes(book.title)
+        ).slice(0, 3) // Ensure we only show 3 books max
+        
+        displayedBooks = []
+        currentBatch = 0
+        loadMoreBooks()
+        updateDisplay()
+        
       } catch (e) {
-        trendingContainer.innerHTML = '<p class="muted">Unable to load trending books.</p>'
+        console.error('Error loading trending books:', e)
+        // Fallback to top-rated books
+        filteredBooks = allBooks
+          .sort((a, b) => (b.rating || 0) - (a.rating || 0))
+          .slice(0, 3)
+        
+        displayedBooks = []
+        currentBatch = 0
+        loadMoreBooks()
+        updateDisplay()
       }
-    } else {
-      // Hide recommendations
-      recsSection.style.display = 'none'
-      recsBtn.textContent = '✨ Trending'
     }
   }
 
-  const bindTrendingCards = () => {
-    rootEl.querySelectorAll('.trending-card').forEach(card => {
-      const bookId = card.getAttribute('data-book-id')
-      card.onclick = () => navigateTo(`/book/${bookId}`)
-    })
-    
-    rootEl.querySelectorAll('[data-trending-add]').forEach(btn => {
-      const bookId = btn.getAttribute('data-trending-add')
-      const price = Number(btn.getAttribute('data-price') || '0')
-      
-      btn.onclick = (e) => {
-        e.stopPropagation()
-        
-        if (isInCart(bookId)) {
-          removeFromCart(bookId)
-          btn.textContent = 'Add'
-          btn.classList.remove('remove')
-        } else {
-          addToCart(bookId, 1, price)
-          btn.textContent = 'Remove'
-          btn.classList.add('remove')
-        }
-        
-        updateCartCount()
-      }
-    })
-  }
 
   loadAllBooks()
 }
@@ -312,9 +296,10 @@ function layout(content, hasMore = false) {
       <div class="nav-brand">📚 BookVerse</div>
       <div class="nav-links">
         <button id="home-btn" class="nav-btn">Home</button>
-        <button id="recommendations-btn" class="nav-btn">Recommendations</button>
+        <button id="recommendations-btn" class="nav-btn">✨ Trending</button>
         <button id="cart-btn" class="nav-btn cart-btn">Cart</button>
       </div>
+      ${renderAuthStatus()}
     </nav>
     
     <div class="banner">
@@ -328,13 +313,6 @@ function layout(content, hasMore = false) {
       <button id="clear-search-btn" class="btn secondary" style="margin-left: 8px; display: none;">Clear</button>
     </div>
     
-    <div id="recommendations-section" style="display: none; margin: 16px 0;">
-      <div class="card">
-        <h3 style="margin: 0 0 16px 0; color: var(--brand);">📖 Recommended for You</h3>
-        <p style="margin: 0 0 16px 0; color: var(--muted);">3 books we think you'll love</p>
-        <div id="trending-books" class="grid cols-auto"></div>
-      </div>
-    </div>
     
     <div class="scroll-container">
       <div class="grid cols-auto">
@@ -383,25 +361,6 @@ function card(book) {
   `
 }
 
-function trendingCard(book) {
-  const price = Number(book.price || 0)
-  const rating = book.rating || 0
-  
-  return `
-  <article class="card trending-card clickable" data-book-id="${book.id}" style="position: relative;">
-    <div style="position: absolute; top: 8px; right: 8px; background: var(--brand); color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 600;">✨ Recommended</div>
-    <img class="cover" src="${book.coverImageUrl || resolveImageUrl(book.cover_image_url, window.__BOOKVERSE_CONFIG__.inventoryBaseUrl)}" alt="${escapeHtml(book.title)}" loading="lazy"/>
-    <h4 style="margin:8px 0 4px; font-size: 14px;">${escapeHtml(book.title)}</h4>
-    <p class="muted" style="margin:0 0 4px; font-size: 12px;">${book.authors?.join(', ') || 'Unknown Author'}</p>
-    ${book.reason ? `<p style="margin:0 0 8px; font-size: 12px; color: var(--accent); font-style: italic;">${book.reason}</p>` : ''}
-    ${renderRating(rating)}
-    <div class="price" style="font-size: 16px;">$${price.toFixed(2)}</div>
-    <div class="row" style="justify-content:center; margin-top: 8px;">
-      <button class="btn" data-trending-add="${book.id}" data-price="${price}" onclick="event.stopPropagation()" style="padding: 6px 12px; font-size: 14px;">Add</button>
-    </div>
-  </article>
-  `
-}
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]))

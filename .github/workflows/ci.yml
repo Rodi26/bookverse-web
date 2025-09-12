@@ -542,7 +542,7 @@ jobs:
           
           # Check if application exists
           APP_CHECK_RESP=$(mktemp)
-          APP_CHECK_STATUS=$(jf curl -H "X-JFrog-Project: ${{ vars.PROJECT_KEY }}" -H "Accept: application/json" "/apptrust/api/v1/applications/$APPLICATION_KEY" -w "%{http_code}" -o "$APP_CHECK_RESP" 2>/dev/null || echo "000")
+          APP_CHECK_STATUS=$(curl -s -H "Authorization: Bearer $JF_ACCESS_TOKEN" -H "X-JFrog-Project: ${{ vars.PROJECT_KEY }}" -H "Accept: application/json" "${{ vars.JFROG_URL }}/apptrust/api/v1/applications/$APPLICATION_KEY" -w "%{http_code}" -o "$APP_CHECK_RESP" 2>/dev/null || echo "000")
           echo "📋 Application check status: $APP_CHECK_STATUS"
           if [[ "$APP_CHECK_STATUS" != "200" ]]; then
             echo "📨 Application check response:"; cat "$APP_CHECK_RESP" || true; echo
@@ -550,7 +550,7 @@ jobs:
             CREATE_APP_BODY=$(jq -n --arg name "BookVerse Web" --arg key "$APPLICATION_KEY" --arg proj "${{ vars.PROJECT_KEY }}" '{application_name:$name, application_key:$key, project_key:$proj}')
             echo "📝 Create app payload: $CREATE_APP_BODY"
             CREATE_RESP=$(mktemp)
-            CREATE_STATUS=$(jf curl -X POST -H "X-JFrog-Project: ${{ vars.PROJECT_KEY }}" -H "Content-Type: application/json" -H "Accept: application/json" -d "$CREATE_APP_BODY" "/apptrust/api/v1/applications/" -w "%{http_code}" -o "$CREATE_RESP" 2>/dev/null || echo "000")
+            CREATE_STATUS=$(curl -s -X POST -H "Authorization: Bearer $JF_ACCESS_TOKEN" -H "X-JFrog-Project: ${{ vars.PROJECT_KEY }}" -H "Content-Type: application/json" -H "Accept: application/json" -d "$CREATE_APP_BODY" "${{ vars.JFROG_URL }}/apptrust/api/v1/applications/" -w "%{http_code}" -o "$CREATE_RESP" 2>/dev/null || echo "000")
             echo "📨 Create Application Status: $CREATE_STATUS"
             echo "📨 Create Application Response:"; cat "$CREATE_RESP" || true; echo
             rm -f "$CREATE_RESP"

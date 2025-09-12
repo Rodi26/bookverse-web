@@ -1,6 +1,8 @@
 // Circuit breaker removed - was causing more issues than benefits
 // Modern browsers and Kubernetes provide sufficient resilience
 
+import authService from './auth.js'
+
 function serviceBase(service) {
   const cfg = window.__BOOKVERSE_CONFIG__ || {}
   if (service === 'inventory') return cfg.inventoryBaseUrl || ''
@@ -12,6 +14,13 @@ function serviceBase(service) {
 function withHeaders(opts = {}) {
   const headers = new Headers(opts.headers || {})
   headers.set('X-Request-Id', crypto.randomUUID())
+  
+  // Add authentication token if available
+  const token = authService.getAccessToken()
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`)
+  }
+  
   // Minimal traceparent: version 00, random 16-byte trace id, 8-byte span id
   const traceId = [...crypto.getRandomValues(new Uint8Array(16))].map(b => b.toString(16).padStart(2, '0')).join('')
   const spanId = [...crypto.getRandomValues(new Uint8Array(8))].map(b => b.toString(16).padStart(2, '0')).join('')

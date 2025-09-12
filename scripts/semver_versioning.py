@@ -68,9 +68,11 @@ def find_app_entry(vm: Dict[str, Any], app_key: str) -> Dict[str, Any]:
     return {}
 
 
-def compute_next_application_version(app_key: str, vm: Dict[str, Any], jfrog_url: str, token: str) -> str:
+def compute_next_application_version(app_key: str, vm: Dict[str, Any], jfrog_url: str, token: Optional[str] = None) -> str:
     base = jfrog_url.rstrip("/") + "/apptrust/api/v1"
-    headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
+    headers = {"Accept": "application/json"}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
 
     # 1) Prefer the most recently created version and bump its patch if SemVer
     latest_url = f"{base}/applications/{urllib.parse.quote(app_key)}/versions?limit=1&order_by=created&order_asc=false"
@@ -137,10 +139,12 @@ def compute_next_application_version(app_key: str, vm: Dict[str, Any], jfrog_url
     return bump_patch(str(seed))
 
 
-def compute_next_build_number(app_key: str, vm: Dict[str, Any], jfrog_url: str, token: str) -> str:
+def compute_next_build_number(app_key: str, vm: Dict[str, Any], jfrog_url: str, token: Optional[str] = None) -> str:
     # Build number comes from the last AppTrust version's sources.builds[0].number
     base = jfrog_url.rstrip("/") + "/apptrust/api/v1"
-    headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
+    headers = {"Accept": "application/json"}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
 
     # Latest version first
     vlist_url = f"{base}/applications/{urllib.parse.quote(app_key)}/versions?limit=1&order_by=created&order_asc=false"
@@ -190,7 +194,7 @@ def compute_next_build_number(app_key: str, vm: Dict[str, Any], jfrog_url: str, 
     return bump_patch(str(seed))
 
 
-def compute_next_package_tag(app_key: str, package_name: str, vm: Dict[str, Any], jfrog_url: str, token: str, project_key: Optional[str]) -> str:
+def compute_next_package_tag(app_key: str, package_name: str, vm: Dict[str, Any], jfrog_url: str, token: Optional[str] = None, project_key: Optional[str] = None) -> str:
     # Find package configuration and seed
     entry = find_app_entry(vm, app_key)
     pkg = None
@@ -208,7 +212,9 @@ def compute_next_package_tag(app_key: str, package_name: str, vm: Dict[str, Any]
     if not seed or not parse_semver(str(seed)):
         raise SystemExit(f"No valid seed for package {app_key}/{package_name}")
     
-    headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
+    headers = {"Accept": "application/json"}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
     
     # Try to find existing versions to bump from
     existing_versions = []
@@ -282,7 +288,7 @@ def main():
     p.add_argument("--application-key", required=True)
     p.add_argument("--version-map", required=True)
     p.add_argument("--jfrog-url", required=True)
-    p.add_argument("--jfrog-token", required=True)
+    p.add_argument("--jfrog-token", required=False, help="JFrog access token (optional with OIDC)")
     p.add_argument("--project-key", required=False)
     p.add_argument("--packages", help="Comma-separated package names to compute tags for", required=False)
     args = p.parse_args()
@@ -290,7 +296,7 @@ def main():
     vm = load_version_map(args.version_map)
     app_key = args.application_key
     jfrog_url = args.jfrog_url
-    token = args.jfrog_token
+    token = args.jfrog_token or os.getenv("JF_ACCESS_TOKEN")
 
     app_version = compute_next_application_version(app_key, vm, jfrog_url, token)
     build_number = compute_next_build_number(app_key, vm, jfrog_url, token)

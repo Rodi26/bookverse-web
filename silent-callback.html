@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>BookVerse - Silent Authentication</title>
+</head>
+<body>
+    <script type="module">
+        import { UserManager } from './node_modules/oidc-client-ts/dist/browser/oidc-client-ts.js'
+        
+        new UserManager({})
+            .signinSilentCallback()
+            .then(() => {
+                // Debug: Silent authentication successful
+            })
+            .catch((error) => {
+                console.error('Silent authentication failed:', error)
+            })
+    </script>
+</body>
+</html>
