@@ -85,7 +85,7 @@ export function renderCatalog(rootEl) {
     const cartBtn = rootEl.querySelector('#cart-btn')
     if (cartBtn) {
       cartBtn.onclick = () => navigateTo('/cart')
-      updateCartButton()
+      updateCartCount()
     }
 
     const homeBtn = rootEl.querySelector('#home-btn')
