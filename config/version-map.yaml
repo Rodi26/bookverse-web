@@ -9,4 +9,4 @@ applications:
         seed: 1.6.14
       - type: generic
         name: web-assets.tar.gz
-        seed: 3.31.39
+        seed: 3.31.50
