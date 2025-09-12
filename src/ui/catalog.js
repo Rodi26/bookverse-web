@@ -15,17 +15,24 @@ export function renderCatalog(rootEl) {
   // Load all books at once
   const loadAllBooks = async () => {
     try {
+      console.log('🔍 CATALOG: Starting book loading...');
+      
       // Load multiple pages to get all books
       let allData = []
       let page = 1
       let hasMore = true
       
       while (hasMore) {
+        console.log(`🔍 CATALOG: Loading page ${page}...`);
         const data = await listBooks(page, 50) // Load 50 per page
+        console.log(`🔍 CATALOG: Page ${page} loaded:`, data.books?.length, 'books');
+        
         allData = allData.concat(data.books || [])
         hasMore = data.pagination && page < data.pagination.pages
         page++
       }
+      
+      console.log('✅ CATALOG: All books loaded:', allData.length, 'total books');
       
       allBooks = allData
       filteredBooks = allBooks
@@ -35,6 +42,8 @@ export function renderCatalog(rootEl) {
       updateDisplay()
       bind()
     } catch (error) {
+      console.error('❌ CATALOG: Book loading failed:', error);
+      console.error('❌ CATALOG: Error details:', error.message, error.stack);
       rootEl.innerHTML = layout('Error loading books. Please try again.')
     }
   }

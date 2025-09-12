@@ -14,4 +14,8 @@ export async function listInventory(page = 1, perPage = 10, lowStock = false) {
   return httpJson('inventory', `/api/v1/inventory?${qs.toString()}`)
 }
 
+// Expose functions globally for debugging
+window.listBooks = listBooks
+window.getBook = getBook
+
 
