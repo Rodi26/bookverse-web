@@ -304,21 +304,35 @@ jobs:
             exit 1
           fi
 
-  promote:
-    name: "Promote (Conditional)"
-    needs: [analyze-commit, build-test-publish]
-    if: needs.analyze-commit.outputs.create_app_version == 'true'
+  create-promote:
+    name: "Create Application Version & Promote (Conditional)"
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash
+    needs: [analyze-commit, build-test-publish]
+    if: needs.analyze-commit.outputs.create_app_version == 'true' && needs.build-test-publish.result == 'success'
+    
     permissions:
       contents: read
       id-token: write
 
+    env:
+      BUILD_NAME: "bookverse-web_CI_create-promote"
+      BUILD_NUMBER: ${{ needs.build-test-publish.outputs.build_number }}
+      SERVICE_NAME: "web"
+      APPLICATION_KEY: "bookverse-web"
+      APP_VERSION: ${{ needs.build-test-publish.outputs.app_version }}
+
     steps:
       - name: "[Setup] Checkout"
         uses: actions/checkout@v4
+
+      - name: "[Setup] JFrog CLI"
+        uses: EyalDelarea/setup-jfrog-cli@swampUpAppTrust
+        with:
+          version: latest
+        env:
+          JFROG_CLI_BUILD_NAME: ${{ needs.build-test-publish.outputs.build_name }}
+          JFROG_CLI_BUILD_NUMBER: ${{ env.BUILD_NUMBER }}
+          JFROG_CLI_BUILD_PROJECT: ${{ vars.PROJECT_KEY }}
 
       - name: "[Info] Promotion Information"
         run: |
@@ -329,17 +343,7 @@ jobs:
           echo "👤 Triggered by: ${{ github.actor }}"
           echo "🕐 Timestamp: $(date -u)"
 
-      - name: "[Setup] JFrog CLI"
-        uses: EyalDelarea/setup-jfrog-cli@swampUpAppTrust
-        with:
-          version: latest
-          oidc-provider-name: bookverse-web-github
-          oidc-audience: ${{ vars.JFROG_URL }}
-          disable-job-summary: true
-          disable-auto-build-publish: true
-          disable-auto-evidence-collection: false
-
-      - name: "[Auth] Exchange OIDC for promotion"
+      - name: "[Auth] Exchange OIDC and persist JF access token"
         id: exchange-oidc
         env:
           JF_URL: ${{ vars.JFROG_URL }}
@@ -347,44 +351,67 @@ jobs:
           PROVIDER_NAME: bookverse-web-github
         run: |
           set -euo pipefail
+          # Ensure jq
           if ! command -v jq >/dev/null 2>&1; then sudo apt-get update -y && sudo apt-get install -y jq; fi
+          # 1) Get GitHub OIDC ID token (audience -> JFrog URL)
           if [[ -z "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" || -z "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" ]]; then
             echo "❌ Missing GitHub OIDC request env vars" >&2; exit 1; fi
           GH_ID_TOKEN=$(curl -sS -H "Authorization: Bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
             "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=${JF_URL}" | jq -r .value)
           if [[ -z "$GH_ID_TOKEN" || "$GH_ID_TOKEN" == "null" ]]; then echo "❌ Failed to fetch GitHub ID token" >&2; exit 1; fi
+          # 2) Exchange at JFrog Access for access token
           PAYLOAD=$(jq -n --arg jwt "$GH_ID_TOKEN" \
-            --arg provider_name "$PROVIDER_NAME" \
-            --arg project_key "$PROJECT" \
-            --arg job_id "${{ github.job }}" \
-            --arg run_id "${{ github.run_id }}" \
-            --arg repo "https://github.com/${{ github.repository }}" \
-            --arg revision "${{ github.sha }}" \
-            --arg branch "${{ github.ref_name }}" \
-            '{
-              grant_type:"urn:ietf:params:oauth:grant-type:token-exchange",
-              subject_token_type:"urn:ietf:params:oauth:token-type:id_token",
-              subject_token:$jwt,
-              provider_name:$provider_name,
-              project_key:$project_key,
-              job_id:$job_id,
-              run_id:$run_id,
-              repo:$repo,
-              revision:$revision,
-              branch:$branch
-            }')
-          TOKEN=$(curl -sS -X POST -H "Content-Type: application/json" -d "$PAYLOAD" "$JF_URL/access/api/v1/oidc/token" | jq -r .access_token)
-          if [[ -z "$TOKEN" || "$TOKEN" == "null" ]]; then echo "❌ Failed to exchange OIDC token" >&2; exit 1; fi
-          echo "JF_ACCESS_TOKEN=$TOKEN" >> $GITHUB_ENV
-          echo "token=$TOKEN" >> $GITHUB_OUTPUT
-          echo "✅ JFrog access token obtained for promotion"
+            '{grant_type: "urn:ietf:params:oauth:grant-type:token-exchange", subject_token: $jwt, subject_token_type: "urn:ietf:params:oauth:token-type:id_token", provider_name: env.PROVIDER_NAME}')
+          JF_ACCESS_TOKEN=$(curl -sS -X POST "${JF_URL}/access/api/v1/oidc/token" \
+            -H "Content-Type: application/json" -d "$PAYLOAD" | jq -r .access_token)
+          if [[ -z "$JF_ACCESS_TOKEN" || "$JF_ACCESS_TOKEN" == "null" ]]; then echo "❌ Failed to exchange OIDC token" >&2; exit 1; fi
+          # 3) Persist for subsequent steps
+          echo "JF_ACCESS_TOKEN=$JF_ACCESS_TOKEN" >> $GITHUB_ENV
+          echo "token=$JF_ACCESS_TOKEN" >> $GITHUB_OUTPUT
+          echo "✅ JFrog access token obtained and persisted"
 
-      - name: "[Promote] Create AppTrust Application Version"
-        env:
-          APPLICATION_KEY: ${{ env.APPLICATION_KEY || 'bookverse-web' }}
-          APP_VERSION: ${{ needs.build-test-publish.outputs.app_version }}
-          BUILD_NAME: ${{ needs.build-test-publish.outputs.build_name }}
-          BUILD_STARTED_TIMESTAMP: ${{ needs.build-test-publish.outputs.build_started_timestamp }}
+      - name: "[Setup] Install Python dependencies"
+        run: |
+          pip install --user PyYAML
+          echo "✅ Python dependencies installed"
+
+      - name: "[Setup] Determine SemVer"
+        id: determine-semver
+        run: |
+          SERVICE_NAME=${SERVICE_NAME:-$(echo ${{ github.event.repository.name }} | sed 's/bookverse-//')}
+          APPLICATION_KEY="bookverse-$SERVICE_NAME"
+          
+          # Use the persisted JF_ACCESS_TOKEN from the auth step
+          if [[ -z "${JF_ACCESS_TOKEN:-}" ]]; then
+            echo "❌ Missing JF_ACCESS_TOKEN. Ensure OIDC exchange step succeeded." >&2
+            exit 1
+          fi
+          
+          echo "✅ Using persisted JFrog access token for semver determination"
+          
+          # Use the unified semver determination script
+          chmod +x ./scripts/determine-semver.sh
+          SEMVER_OUTPUT=$(./scripts/determine-semver.sh \
+            --application-key "$APPLICATION_KEY" \
+            --version-map "./config/version-map.yaml" \
+            --jfrog-url "${{ vars.JFROG_URL }}" \
+            --jfrog-token "$JF_ACCESS_TOKEN" \
+            --project-key "${{ vars.PROJECT_KEY }}" \
+            --packages "$SERVICE_NAME" \
+            --verbose)
+          
+          # Extract APP_VERSION from the Python script's JSON output
+          APP_VERSION=$(echo "$SEMVER_OUTPUT" | grep '{"application_key"' | jq -r '.app_version')
+          if [[ -z "$APP_VERSION" || "$APP_VERSION" == "null" ]]; then
+            echo "❌ Failed to extract APP_VERSION from semver output" >&2
+            exit 1
+          fi
+          
+          echo "APP_VERSION=$APP_VERSION" >> $GITHUB_ENV
+          echo "app_version=$APP_VERSION" >> $GITHUB_OUTPUT
+          echo "✅ Determined APP_VERSION: $APP_VERSION"
+
+      - name: "[Create] Application Version"
         run: |
           set -euo pipefail
           echo "🚀 Creating AppTrust Application Version"
@@ -478,8 +505,6 @@ jobs:
 
       - name: "[Auto-Promote] Through Stages"
         env:
-          APPLICATION_KEY: ${{ env.APPLICATION_KEY || 'bookverse-web' }}
-          APP_VERSION: ${{ needs.build-test-publish.outputs.app_version }}
           EVIDENCE_PRIVATE_KEY: ${{ secrets.EVIDENCE_PRIVATE_KEY }}
         run: |
           echo "📈 Starting automatic promotion for ${{ env.APP_VERSION }}"
