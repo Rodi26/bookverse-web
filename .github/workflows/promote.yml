@@ -236,7 +236,10 @@ jobs:
           EVIDENCE_KEY_ALIAS: ${{ vars.EVIDENCE_KEY_ALIAS }}
         run: |
           set -euo pipefail
-          export JFROG_URL="${{ vars.JFROG_URL }}"; export PROJECT_KEY="${{ vars.PROJECT_KEY }}"; # JF_ACCESS_TOKEN already set by OIDC exchange; source .github/scripts/promote_lib.sh
+          export JFROG_URL="${{ vars.JFROG_URL }}"
+          export PROJECT_KEY="${{ vars.PROJECT_KEY }}"
+          # JF_ACCESS_TOKEN already set by OIDC exchange
+          source .github/scripts/promote_lib.sh
           fetch_summary
           if [[ "$(display_stage_for "${CURRENT_STAGE:-}")" == "STAGING" ]]; then
             ALLOW_RELEASE=true
