@@ -393,26 +393,70 @@ jobs:
           echo "🏗️ Build: $BUILD_NAME"
           echo "⏰ Build Started: $BUILD_STARTED_TIMESTAMP"
           
-          # Create application version payload
-          APP_VERSION_PAYLOAD=$(jq -n \
-            --arg version "$APP_VERSION" \
-            --arg build_name "$BUILD_NAME" \
-            --arg build_started "$BUILD_STARTED_TIMESTAMP" \
-            --arg commit_sha "${{ github.sha }}" \
-            --arg commit_message "$(git log -1 --pretty=%B | head -1)" \
-            --arg branch "${{ github.ref_name }}" \
-            --arg actor "${{ github.actor }}" \
-            --arg run_id "${{ github.run_id }}" \
-            '{
-              version: $version,
-              build_name: $build_name,
-              build_started: $build_started,
-              commit_sha: $commit_sha,
-              commit_message: $commit_message,
-              branch: $branch,
-              triggered_by: $actor,
-              github_run_id: $run_id
-            }')
+          # Determine application version tag (same as old working web UI)
+          TAG_OPTIONS=(
+            "release"
+            "hotfix"
+            "feature"
+            "bugfix"
+            "enhancement"
+            "security"
+            "performance"
+            "refactor"
+            "experimental"
+            "maintenance"
+            "integration"
+            "documentation"
+            "stable"
+            "beta"
+          )
+          TAG_INDEX=$((${GITHUB_RUN_NUMBER:-0} % ${#TAG_OPTIONS[@]}))
+          APP_TAG="${TAG_OPTIONS[$TAG_INDEX]}"
+          echo "🏷️ Application Version Tag (demo simulation): $APP_TAG"
+          
+          # Create application version payload with build sources (same format as old working web UI)
+          BUILD_INFO_REPO="bookverse-build-info"
+          if [[ -n "$BUILD_STARTED_TIMESTAMP" && "$BUILD_STARTED_TIMESTAMP" != "null" ]]; then
+            APP_VERSION_PAYLOAD=$(jq -n \
+              --arg version "$APP_VERSION" \
+              --arg tag "$APP_TAG" \
+              --arg build_name "$BUILD_NAME" \
+              --arg build_number "${{ needs.build-test-publish.outputs.build_number }}" \
+              --arg build_info_repo "$BUILD_INFO_REPO" \
+              --arg build_started "$BUILD_STARTED_TIMESTAMP" \
+              '{
+                version: $version,
+                tag: $tag,
+                sources: {
+                  builds: [{
+                    name: $build_name,
+                    number: $build_number,
+                    repository_key: $build_info_repo,
+                    include_dependencies: false,
+                    started: $build_started
+                  }]
+                }
+              }')
+          else
+            APP_VERSION_PAYLOAD=$(jq -n \
+              --arg version "$APP_VERSION" \
+              --arg tag "$APP_TAG" \
+              --arg build_name "$BUILD_NAME" \
+              --arg build_number "${{ needs.build-test-publish.outputs.build_number }}" \
+              --arg build_info_repo "$BUILD_INFO_REPO" \
+              '{
+                version: $version,
+                tag: $tag,
+                sources: {
+                  builds: [{
+                    name: $build_name,
+                    number: $build_number,
+                    repository_key: $build_info_repo,
+                    include_dependencies: false
+                  }]
+                }
+              }')
+          fi
           
           echo "📤 Payload: $APP_VERSION_PAYLOAD"
           
