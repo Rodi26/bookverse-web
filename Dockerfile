@@ -10,6 +10,7 @@ RUN if [ "$BUILD_MODE" = "debug" ]; then npm run build:debug; else npm run build
 # Stage 2: nginx runtime
 FROM nginx:1.27-alpine
 COPY nginx.conf /etc/nginx/nginx.conf
+COPY proxy_params.conf /etc/nginx/proxy_params.conf
 COPY --from=builder /app/dist /usr/share/nginx/html
 EXPOSE 8080
 COPY entrypoint.sh /entrypoint.sh

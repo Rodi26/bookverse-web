@@ -124,7 +124,7 @@ jobs:
             }')
           TOKEN=$(curl -sS -X POST -H "Content-Type: application/json" -d "$PAYLOAD" "$JF_URL/access/api/v1/oidc/token" | jq -r .access_token)
           if [[ -z "$TOKEN" || "$TOKEN" == "null" ]]; then echo "❌ Failed to exchange OIDC token" >&2; exit 1; fi
-          echo "JF_ACCESS_TOKEN=$TOKEN" >> $GITHUB_ENV
+          echo "JF_OIDC_TOKEN=$TOKEN" >> $GITHUB_ENV
 
       - name: "[Setup] Install Python dependencies"
         run: |
@@ -146,7 +146,7 @@ jobs:
             --application-key "$APPLICATION_KEY" \
             --version-map "./config/version-map.yaml" \
             --jfrog-url "${{ vars.JFROG_URL }}" \
-            --jfrog-token "$JF_ACCESS_TOKEN" \
+            --jfrog-token "$JF_OIDC_TOKEN" \
             --project-key "${{ vars.PROJECT_KEY }}" \
             --packages "web,web-assets.tar.gz" \
             --verbose)
@@ -447,7 +447,7 @@ jobs:
             }')
           TOKEN=$(curl -sS -X POST -H "Content-Type: application/json" -d "$PAYLOAD" "$JF_URL/access/api/v1/oidc/token" | jq -r .access_token)
           if [[ -z "$TOKEN" || "$TOKEN" == "null" ]]; then echo "❌ Failed to exchange OIDC token" >&2; exit 1; fi
-          echo "JF_ACCESS_TOKEN=$TOKEN" >> $GITHUB_ENV
+          echo "JF_OIDC_TOKEN=$TOKEN" >> $GITHUB_ENV
 
       - name: "[Setup] AppTrust variables"
         run: |
@@ -484,7 +484,7 @@ jobs:
           ENC_BUILD_NUMBER=$(printf '%s' "$BUILD_NUMBER" | jq -sRr @uri)
           URL="${{ vars.JFROG_URL }}/artifactory/api/build/${ENC_BUILD_NAME}/${ENC_BUILD_NUMBER}?project=${{ vars.PROJECT_KEY }}"
           echo "GET $URL"
-          curl -sS -H "Authorization: Bearer $JF_ACCESS_TOKEN" -H "X-JFrog-Project: ${{ vars.PROJECT_KEY }}" -H "Accept: application/json" "$URL" \
+          curl -sS -H "Authorization: Bearer $JF_OIDC_TOKEN" -H "X-JFrog-Project: ${{ vars.PROJECT_KEY }}" -H "Accept: application/json" "$URL" \
             | jq '.buildInfo.modules // [] | map({id, artifacts: (.artifacts // [] | length)})'
 
       - name: "[Release] Create application version"
@@ -538,11 +538,11 @@ jobs:
 
           # Preflight: ensure the application exists; create if 404
           echo "  PROJECT_KEY: ${{ vars.PROJECT_KEY }}"
-          echo "  JF_ACCESS_TOKEN: ${JF_ACCESS_TOKEN:0:20}..." 
+          echo "  JF_OIDC_TOKEN: ${JF_OIDC_TOKEN:0:20}..." 
           
           # Check if application exists
           APP_CHECK_RESP=$(mktemp)
-          APP_CHECK_STATUS=$(curl -s -H "Authorization: Bearer $JF_ACCESS_TOKEN" -H "X-JFrog-Project: ${{ vars.PROJECT_KEY }}" -H "Accept: application/json" "${{ vars.JFROG_URL }}/apptrust/api/v1/applications/$APPLICATION_KEY" -w "%{http_code}" -o "$APP_CHECK_RESP" 2>/dev/null || echo "000")
+          APP_CHECK_STATUS=$(curl -s -H "Authorization: Bearer $JF_OIDC_TOKEN" -H "X-JFrog-Project: ${{ vars.PROJECT_KEY }}" -H "Accept: application/json" "${{ vars.JFROG_URL }}/apptrust/api/v1/applications/$APPLICATION_KEY" -w "%{http_code}" -o "$APP_CHECK_RESP" 2>/dev/null || echo "000")
           echo "📋 Application check status: $APP_CHECK_STATUS"
           if [[ "$APP_CHECK_STATUS" != "200" ]]; then
             echo "📨 Application check response:"; cat "$APP_CHECK_RESP" || true; echo
@@ -550,7 +550,7 @@ jobs:
             CREATE_APP_BODY=$(jq -n --arg name "BookVerse Web" --arg key "$APPLICATION_KEY" --arg proj "${{ vars.PROJECT_KEY }}" '{application_name:$name, application_key:$key, project_key:$proj}')
             echo "📝 Create app payload: $CREATE_APP_BODY"
             CREATE_RESP=$(mktemp)
-            CREATE_STATUS=$(curl -s -X POST -H "Authorization: Bearer $JF_ACCESS_TOKEN" -H "X-JFrog-Project: ${{ vars.PROJECT_KEY }}" -H "Content-Type: application/json" -H "Accept: application/json" -d "$CREATE_APP_BODY" "${{ vars.JFROG_URL }}/apptrust/api/v1/applications/" -w "%{http_code}" -o "$CREATE_RESP" 2>/dev/null || echo "000")
+            CREATE_STATUS=$(curl -s -X POST -H "Authorization: Bearer $JF_OIDC_TOKEN" -H "X-JFrog-Project: ${{ vars.PROJECT_KEY }}" -H "Content-Type: application/json" -H "Accept: application/json" -d "$CREATE_APP_BODY" "${{ vars.JFROG_URL }}/apptrust/api/v1/applications/" -w "%{http_code}" -o "$CREATE_RESP" 2>/dev/null || echo "000")
             echo "📨 Create Application Status: $CREATE_STATUS"
             echo "📨 Create Application Response:"; cat "$CREATE_RESP" || true; echo
             rm -f "$CREATE_RESP"
@@ -568,7 +568,7 @@ jobs:
           RESP_BODY=$(mktemp)
           HTTP_STATUS=$(curl -sS -L -o "$RESP_BODY" -w "%{http_code}" -X POST \
             "${{ vars.JFROG_URL }}/apptrust/api/v1/applications/$APPLICATION_KEY/versions?async=false" \
-            -H "Authorization: Bearer $JF_ACCESS_TOKEN" \
+            -H "Authorization: Bearer $JF_OIDC_TOKEN" \
             -H "Content-Type: application/json" \
             -H "X-JFrog-Project: ${{ vars.PROJECT_KEY }}" \
             -d "$APP_VERSION_PAYLOAD")
@@ -584,7 +584,7 @@ jobs:
           CONTENT_FILE=$(mktemp)
           CONTENT_STATUS=$(curl -sS -L -o "$CONTENT_FILE" -w "%{http_code}" \
             "${{ vars.JFROG_URL }}/apptrust/api/v1/applications/$APPLICATION_KEY/versions/$APP_VERSION/content" \
-            -H "Authorization: Bearer $JF_ACCESS_TOKEN" \
+            -H "Authorization: Bearer $JF_OIDC_TOKEN" \
             -H "Accept: application/json")
           if [[ "$CONTENT_STATUS" != "200" ]]; then
             echo "❌ Version content endpoint returned HTTP $CONTENT_STATUS for $APPLICATION_KEY@$APP_VERSION" >&2

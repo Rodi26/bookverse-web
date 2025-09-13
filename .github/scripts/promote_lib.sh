@@ -20,7 +20,7 @@ display_stage_for() { local s="${1:-}"; if [[ "$s" == "PROD" || "$s" == "${PROJE
 
 fetch_summary() {
   local body=$(mktemp) code
-  code=$(curl -sS -L -o "$body" -w "%{http_code}" "${JFROG_URL}/apptrust/api/v1/applications/${APPLICATION_KEY}/versions/${APP_VERSION}/content" -H "Authorization: Bearer ${JF_ACCESS_TOKEN}" -H "Accept: application/json" || echo 000)
+  code=$(curl -sS -L -o "$body" -w "%{http_code}" "${JFROG_URL}/apptrust/api/v1/applications/${APPLICATION_KEY}/versions/${APP_VERSION}/content" -H "Authorization: Bearer ${JF_OIDC_TOKEN}" -H "Accept: application/json" || echo 000)
   if [[ "$code" -ge 200 && "$code" -lt 300 ]]; then
     CURRENT_STAGE=$(jq -r '.current_stage // empty' "$body" 2>/dev/null || echo "");
     RELEASE_STATUS=$(jq -r '.release_status // empty' "$body" 2>/dev/null || echo "");
@@ -31,11 +31,11 @@ fetch_summary() {
   echo "🔎 Current stage: $(display_stage_for "${CURRENT_STAGE:-UNASSIGNED}") (release_status=${RELEASE_STATUS:-unknown})"
 }
 
-apptrust_post(){ local path="${1:-}" data="${2:-}" out="${3:-}"; curl -sS -L -o "$out" -w "%{http_code}" -X POST "${JFROG_URL}${path}" -H "Authorization: Bearer ${JF_ACCESS_TOKEN}" -H "Content-Type: application/json" -H "Accept: application/json" -d "$data"; }
+apptrust_post(){ local path="${1:-}" data="${2:-}" out="${3:-}"; curl -sS -L -o "$out" -w "%{http_code}" -X POST "${JFROG_URL}${path}" -H "Authorization: Bearer ${JF_OIDC_TOKEN}" -H "Content-Type: application/json" -H "Accept: application/json" -d "$data"; }
 
 promote_to_stage(){ local d="${1:-}" resp=$(mktemp) code api; api=$(resolve_api_stage_for_display "$d"); echo "🚀 Promoting to ${d} via AppTrust"; code=$(apptrust_post "/apptrust/api/v1/applications/${APPLICATION_KEY}/versions/${APP_VERSION}/promote?async=false" "{\"target_stage\": \"${api}\", \"promotion_type\": \"move\"}" "$resp"); echo "HTTP $code"; cat "$resp" || true; echo; rm -f "$resp"; if [[ "$code" -lt 200 || "$code" -ge 300 ]]; then echo "❌ Promotion to ${d} failed (HTTP $code)" >&2; print_request_info "POST" "${JFROG_URL}/apptrust/api/v1/applications/${APPLICATION_KEY}/versions/${APP_VERSION}/promote?async=false" "{\"target_stage\": \"${api}\", \"promotion_type\": \"move\"}"; return 1; fi; PROMOTED_STAGES="${PROMOTED_STAGES:-}${PROMOTED_STAGES:+ }${d}"; echo "PROMOTED_STAGES=${PROMOTED_STAGES}" >> "${GITHUB_ENV:-/dev/null}"; fetch_summary; }
 
-release_version(){ local resp=$(mktemp) code payload service repo_docker repo_generic; echo "🚀 Releasing to ${FINAL_STAGE} via AppTrust Release API"; if [[ -n "${RELEASE_INCLUDED_REPO_KEYS:-}" ]]; then payload=$(printf '{"promotion_type":"move","included_repository_keys":%s}' "${RELEASE_INCLUDED_REPO_KEYS}"); else service="${APPLICATION_KEY#${PROJECT_KEY}-}"; repo_docker="${PROJECT_KEY}-${service}-internal-docker-release-local"; repo_generic="${PROJECT_KEY}-${service}-internal-generic-release-local"; payload=$(printf '{"promotion_type":"move","included_repository_keys":["%s","%s"]}' "$repo_docker" "$repo_generic"); fi; code=$(curl -sS -L -o "$resp" -w "%{http_code}" -X POST "${JFROG_URL}/apptrust/api/v1/applications/${APPLICATION_KEY}/versions/${APP_VERSION}/release?async=false" -H "Authorization: Bearer ${JF_ACCESS_TOKEN}" -H "Content-Type: application/json" -H "Accept: application/json" -d "$payload"); echo "HTTP $code"; cat "$resp" || true; echo; if [[ "$code" -lt 200 || "$code" -ge 300 ]]; then echo "❌ Release to ${FINAL_STAGE} failed (HTTP $code)" >&2; print_request_info "POST" "${JFROG_URL}/apptrust/api/v1/applications/${APPLICATION_KEY}/versions/${APP_VERSION}/release?async=false" "$payload"; rm -f "$resp"; return 1; fi; rm -f "$resp"; DID_RELEASE=true; echo "DID_RELEASE=${DID_RELEASE}" >> "${GITHUB_ENV:-/dev/null}"; PROMOTED_STAGES="${PROMOTED_STAGES:-}${PROMOTED_STAGES:+ }${FINAL_STAGE}"; echo "PROMOTED_STAGES=${PROMOTED_STAGES}" >> "${GITHUB_ENV:-/dev/null}"; fetch_summary; }
+release_version(){ local resp=$(mktemp) code payload service repo_docker repo_generic; echo "🚀 Releasing to ${FINAL_STAGE} via AppTrust Release API"; if [[ -n "${RELEASE_INCLUDED_REPO_KEYS:-}" ]]; then payload=$(printf '{"promotion_type":"move","included_repository_keys":%s}' "${RELEASE_INCLUDED_REPO_KEYS}"); else service="${APPLICATION_KEY#${PROJECT_KEY}-}"; repo_docker="${PROJECT_KEY}-${service}-internal-docker-release-local"; repo_generic="${PROJECT_KEY}-${service}-internal-generic-release-local"; payload=$(printf '{"promotion_type":"move","included_repository_keys":["%s","%s"]}' "$repo_docker" "$repo_generic"); fi; code=$(curl -sS -L -o "$resp" -w "%{http_code}" -X POST "${JFROG_URL}/apptrust/api/v1/applications/${APPLICATION_KEY}/versions/${APP_VERSION}/release?async=false" -H "Authorization: Bearer ${JF_OIDC_TOKEN}" -H "Content-Type: application/json" -H "Accept: application/json" -d "$payload"); echo "HTTP $code"; cat "$resp" || true; echo; if [[ "$code" -lt 200 || "$code" -ge 300 ]]; then echo "❌ Release to ${FINAL_STAGE} failed (HTTP $code)" >&2; print_request_info "POST" "${JFROG_URL}/apptrust/api/v1/applications/${APPLICATION_KEY}/versions/${APP_VERSION}/release?async=false" "$payload"; rm -f "$resp"; return 1; fi; rm -f "$resp"; DID_RELEASE=true; echo "DID_RELEASE=${DID_RELEASE}" >> "${GITHUB_ENV:-/dev/null}"; PROMOTED_STAGES="${PROMOTED_STAGES:-}${PROMOTED_STAGES:+ }${FINAL_STAGE}"; echo "PROMOTED_STAGES=${PROMOTED_STAGES}" >> "${GITHUB_ENV:-/dev/null}"; fetch_summary; }
 
 advance_one_step(){ local allow_release="${ALLOW_RELEASE:-false}"; IFS=' ' read -r -a STAGES <<< "${STAGES_STR:-}"; local current_index=-1 display_current target_index=-1 next_index next_stage_display; display_current=$(display_stage_for "${CURRENT_STAGE:-}"); if [[ -z "${CURRENT_STAGE:-}" || "${display_current}" == "UNASSIGNED" ]]; then current_index=-1; else local i; for i in "${!STAGES[@]}"; do [[ "${STAGES[$i]}" == "${display_current}" ]] && { current_index=$i; break; }; done; fi; local j; for j in "${!STAGES[@]}"; do [[ "${STAGES[$j]}" == "${TARGET_NAME}" ]] && { target_index=$j; break; }; done; [[ "$target_index" -lt 0 ]] && { echo "❌ Target stage '${TARGET_NAME}' not found in lifecycle. Available: ${STAGES[*]}" >&2; return 1; }; [[ "$current_index" -ge "$target_index" ]] && { echo "ℹ️ Current stage (${CURRENT_STAGE:-UNASSIGNED}) is at or beyond target (${TARGET_NAME}). Nothing to promote."; return 0; }; next_index=$((current_index+1)); [[ "$next_index" -gt "$target_index" ]] && { echo "ℹ️ Next stage would exceed target (${TARGET_NAME}). Nothing to promote."; return 0; }; next_stage_display="${STAGES[$next_index]}"; if [[ "$next_stage_display" == "$FINAL_STAGE" ]]; then if [[ "$allow_release" == "true" ]]; then release_version || return 1; else echo "⏭️ Skipping release step (deferred to dedicated step)"; fi; else promote_to_stage "$next_stage_display" || return 1; fi; }
 
@@ -59,7 +59,7 @@ fetch_summary() {
   local body; body=$(mktemp)
   local code; code=$(curl -sS -L -o "$body" -w "%{http_code}" \
     "${JFROG_URL}/apptrust/api/v1/applications/${APPLICATION_KEY}/versions/${APP_VERSION}/content" \
-    -H "Authorization: Bearer ${JF_ACCESS_TOKEN}" \
+    -H "Authorization: Bearer ${JF_OIDC_TOKEN}" \
     -H "Accept: application/json" || echo 000)
   if [[ "$code" -ge 200 && "$code" -lt 300 ]]; then
     CURRENT_STAGE=$(jq -r '.current_stage // empty' "$body" 2>/dev/null || echo "")
@@ -80,7 +80,7 @@ apptrust_post() {
   local path="${1:-}"; local data="${2:-}"; local out_file="${3:-}"; local status
   status=$(curl -sS -L -o "$out_file" -w "%{http_code}" -X POST \
     "${JFROG_URL}${path}" \
-    -H "Authorization: Bearer ${JF_ACCESS_TOKEN}" \
+    -H "Authorization: Bearer ${JF_OIDC_TOKEN}" \
     -H "Content-Type: application/json" \
     -H "Accept: application/json" \
     -d "$data")
@@ -113,7 +113,7 @@ release_version() {
   local payload; payload='{"promotion_type":"move"}'
   http_status=$(curl -sS -L -o "$resp_body" -w "%{http_code}" -X POST \
     "${JFROG_URL}/apptrust/api/v1/applications/${APPLICATION_KEY}/versions/${APP_VERSION}/release?async=false" \
-    -H "Authorization: Bearer ${JF_ACCESS_TOKEN}" \
+    -H "Authorization: Bearer ${JF_OIDC_TOKEN}" \
     -H "Content-Type: application/json" \
     -H "Accept: application/json" \
     -d "$payload")

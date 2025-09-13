@@ -100,7 +100,7 @@ jobs:
             echo "Response: $RESP" >&2
             exit 1
           fi
-          echo "JF_ACCESS_TOKEN=$TOKEN" >> $GITHUB_ENV
+          echo "JF_OIDC_TOKEN=$TOKEN" >> $GITHUB_ENV
 
       - name: "[Setup] Export env"
         run: |
@@ -127,7 +127,7 @@ jobs:
             echo "🔎 Fetching latest application version for $APPLICATION_KEY"
             BASE="${{ vars.JFROG_URL }}"; BASE="${BASE%/}"
             jq_expr='(.results // .data // .items // .versions)[0].version'
-            RESP=$(curl -sS -H "Authorization: Bearer $JF_ACCESS_TOKEN" -H "Accept: application/json" "$BASE/apptrust/api/v1/applications/$APPLICATION_KEY/versions?order_by=created&limit=1" || true)
+            RESP=$(curl -sS -H "Authorization: Bearer $JF_OIDC_TOKEN" -H "Accept: application/json" "$BASE/apptrust/api/v1/applications/$APPLICATION_KEY/versions?order_by=created&limit=1" || true)
             if LATEST_VERSION=$(echo "$RESP" | jq -er "$jq_expr" 2>/dev/null); then APP_VERSION="$LATEST_VERSION"; fi
             if [ -z "$APP_VERSION" ]; then
               echo "❌ Could not determine latest application version for $APPLICATION_KEY" >&2
@@ -151,13 +151,13 @@ jobs:
           echo "TARGET_STAGE=${{ steps.app.outputs.target_stage }}" >> $GITHUB_ENV
           export JFROG_URL="${{ vars.JFROG_URL }}"
           export PROJECT_KEY="${{ vars.PROJECT_KEY }}"
-          # JF_ACCESS_TOKEN is already set from OIDC exchange step above
+          # JF_OIDC_TOKEN is already set from OIDC exchange step above
           source .github/scripts/promote_lib.sh
           fetch_summary
           echo "CURRENT_STAGE_BEFORE=${CURRENT_STAGE:-UNASSIGNED}" >> $GITHUB_ENV
           echo "RELEASE_STATUS_BEFORE=${RELEASE_STATUS:-UNKNOWN}" >> $GITHUB_ENV
           LC_FILE=$(mktemp)
-          CODE=$(curl -sS -L -o "$LC_FILE" -w "%{http_code}" "$JFROG_URL/access/api/v2/lifecycle/?project_key=$PROJECT_KEY" -H "Authorization: Bearer $JF_ACCESS_TOKEN" -H "Accept: application/json" || echo 000)
+          CODE=$(curl -sS -L -o "$LC_FILE" -w "%{http_code}" "$JFROG_URL/access/api/v2/lifecycle/?project_key=$PROJECT_KEY" -H "Authorization: Bearer $JF_OIDC_TOKEN" -H "Accept: application/json" || echo 000)
           if [[ "$CODE" -lt 200 || "$CODE" -ge 300 ]]; then
             echo "❌ Failed to fetch lifecycles list for project '$PROJECT_KEY' (HTTP $CODE)" >&2
             cat "$LC_FILE" || true
@@ -196,7 +196,7 @@ jobs:
           set -euo pipefail
           export JFROG_URL='${{ vars.JFROG_URL }}'
           export PROJECT_KEY='${{ vars.PROJECT_KEY }}'
-          # JF_ACCESS_TOKEN already set by OIDC exchange
+          # JF_OIDC_TOKEN already set by OIDC exchange
           source .github/scripts/promote_lib.sh
           fetch_summary
           ALLOW_RELEASE=false
@@ -209,7 +209,7 @@ jobs:
           set -euo pipefail
           export JFROG_URL='${{ vars.JFROG_URL }}'
           export PROJECT_KEY='${{ vars.PROJECT_KEY }}'
-          # JF_ACCESS_TOKEN already set by OIDC exchange
+          # JF_OIDC_TOKEN already set by OIDC exchange
           source .github/scripts/promote_lib.sh
           for i in 1 2 3 4; do
             fetch_summary
@@ -238,7 +238,7 @@ jobs:
           set -euo pipefail
           export JFROG_URL="${{ vars.JFROG_URL }}"
           export PROJECT_KEY="${{ vars.PROJECT_KEY }}"
-          # JF_ACCESS_TOKEN already set by OIDC exchange
+          # JF_OIDC_TOKEN already set by OIDC exchange
           source .github/scripts/promote_lib.sh
           fetch_summary
           if [[ "$(display_stage_for "${CURRENT_STAGE:-}")" == "STAGING" ]]; then
@@ -254,7 +254,7 @@ jobs:
           if ! command -v jq >/dev/null 2>&1; then sudo apt-get update -y && sudo apt-get install -y jq; fi
           APP_KEY="$APPLICATION_KEY"
           BASE="${{ vars.JFROG_URL }}/apptrust/api/v1"
-          TOKEN="$JF_ACCESS_TOKEN"
+          TOKEN="$JF_OIDC_TOKEN"
           RESP=$(mktemp)
           code=$(curl -sS -L -o "$RESP" -w "%{http_code}" \
             "$BASE/applications/$APP_KEY/versions?limit=1000&order_by=created&order_asc=false" \

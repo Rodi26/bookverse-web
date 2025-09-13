@@ -11,7 +11,7 @@ set -euo pipefail
 #   ./determine-semver.sh --application-key bookverse-web \
 #                        --version-map ./config/version-map.yaml \
 #                        --jfrog-url "$JFROG_URL" \
-#                        --jfrog-token "$JF_ACCESS_TOKEN" \  # Optional with OIDC
+#                        --jfrog-token "$JF_OIDC_TOKEN" \  # Optional with OIDC
 #                        --project-key "$PROJECT_KEY" \
 #                        --packages "web,web-assets.tar.gz"
 #
@@ -125,9 +125,9 @@ if [[ -z "$JFROG_URL" ]]; then
 fi
 
 # Token is optional when using OIDC - check if we have either token or OIDC env
-if [[ -z "$JFROG_TOKEN" && -z "${JF_ACCESS_TOKEN:-}" ]]; then
+if [[ -z "$JFROG_TOKEN" && -z "${JF_OIDC_TOKEN:-}" ]]; then
     echo "⚠️  Warning: No JFrog token provided. This may fail if OIDC authentication is not properly configured." >&2
-    echo "    Either provide --jfrog-token or ensure JF_ACCESS_TOKEN environment variable is set by OIDC workflow." >&2
+    echo "    Either provide --jfrog-token or ensure JF_OIDC_TOKEN environment variable is set by OIDC workflow." >&2
 fi
 
 if [[ ! -f "$VERSION_MAP" ]]; then

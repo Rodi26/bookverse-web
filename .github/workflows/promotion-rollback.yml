@@ -85,7 +85,7 @@ jobs:
             }')
           TOKEN=$(curl -sS -X POST -H "Content-Type: application/json" -d "$PAYLOAD" "$JF_URL/access/api/v1/oidc/token" | jq -r .access_token)
           if [[ -z "$TOKEN" || "$TOKEN" == "null" ]]; then echo "❌ Failed to exchange OIDC token" >&2; exit 1; fi
-          echo "JF_ACCESS_TOKEN=$TOKEN" >> $GITHUB_ENV
+          echo "JF_OIDC_TOKEN=$TOKEN" >> $GITHUB_ENV
 
       - name: "[Setup] Export env"
         env:
@@ -116,7 +116,7 @@ jobs:
           echo "Rolling back $APPLICATION_KEY to $ROLLBACK_TO in $TARGET_STAGE"
           curl -sS -L -X POST \
             "${{ vars.JFROG_URL }}/apptrust/api/v1/applications/$APPLICATION_KEY/versions/$ROLLBACK_TO/promote?to=$TARGET_STAGE" \
-            -H "Authorization: Bearer $JF_ACCESS_TOKEN" \
+            -H "Authorization: Bearer $JF_OIDC_TOKEN" \
             -H "Accept: application/json" --fail
           echo "✅ Rollback promote completed"
 
@@ -127,7 +127,7 @@ jobs:
           if ! command -v jq >/dev/null 2>&1; then sudo apt-get update -y && sudo apt-get install -y jq; fi
           APP_KEY="$APPLICATION_KEY"
           BASE="${{ vars.JFROG_URL }}/apptrust/api/v1"
-          TOKEN='$JF_ACCESS_TOKEN'
+          TOKEN='$JF_OIDC_TOKEN'
           RESP=$(mktemp)
           code=$(curl -sS -L -o "$RESP" -w "%{http_code}" \
             "$BASE/applications/$APP_KEY/versions?limit=1000&order_by=created&order_asc=false" \

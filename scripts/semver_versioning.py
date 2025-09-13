@@ -296,7 +296,7 @@ def main():
     vm = load_version_map(args.version_map)
     app_key = args.application_key
     jfrog_url = args.jfrog_url
-    token = args.jfrog_token or os.getenv("JF_ACCESS_TOKEN")
+    token = args.jfrog_token or os.getenv("JF_OIDC_TOKEN")
 
     app_version = compute_next_application_version(app_key, vm, jfrog_url, token)
     build_number = compute_next_build_number(app_key, vm, jfrog_url, token)

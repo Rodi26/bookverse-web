@@ -4,6 +4,9 @@
 import authService from './auth.js'
 
 function serviceBase(service) {
+  // If service is empty, use relative URLs (nginx proxy handles routing)
+  if (!service) return ''
+  
   const cfg = window.__BOOKVERSE_CONFIG__ || {}
   if (service === 'inventory') return cfg.inventoryBaseUrl || ''
   if (service === 'recommendations') return cfg.recommendationsBaseUrl || ''
