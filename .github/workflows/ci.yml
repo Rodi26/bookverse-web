@@ -379,100 +379,81 @@ jobs:
           echo "token=$TOKEN" >> $GITHUB_OUTPUT
           echo "✅ JFrog access token obtained for promotion"
 
-      - name: "[Promote] Create AppTrust Application Version"
+      - name: "[Auto-Promote] Through Stages"
         env:
           APPLICATION_KEY: ${{ env.APPLICATION_KEY || 'bookverse-web' }}
           APP_VERSION: ${{ needs.build-test-publish.outputs.app_version }}
-          BUILD_NAME: ${{ needs.build-test-publish.outputs.build_name }}
-          BUILD_STARTED_TIMESTAMP: ${{ needs.build-test-publish.outputs.build_started_timestamp }}
+          EVIDENCE_PRIVATE_KEY: ${{ secrets.EVIDENCE_PRIVATE_KEY }}
         run: |
-          set -euo pipefail
-          echo "🚀 Creating AppTrust Application Version"
-          echo "📦 Application: $APPLICATION_KEY"
-          echo "🔢 Version: $APP_VERSION"
-          echo "🏗️ Build: $BUILD_NAME"
-          echo "⏰ Build Started: $BUILD_STARTED_TIMESTAMP"
+          echo "📈 Starting automatic promotion for ${{ env.APP_VERSION }}"
           
-          # Determine application version tag (same as old working web UI)
-          TAG_OPTIONS=(
-            "release"
-            "hotfix"
-            "feature"
-            "bugfix"
-            "enhancement"
-            "security"
-            "performance"
-            "refactor"
-            "experimental"
-            "maintenance"
-            "integration"
-            "documentation"
-            "stable"
-            "beta"
-          )
-          TAG_INDEX=$((${GITHUB_RUN_NUMBER:-0} % ${#TAG_OPTIONS[@]}))
-          APP_TAG="${TAG_OPTIONS[$TAG_INDEX]}"
-          echo "🏷️ Application Version Tag (demo simulation): $APP_TAG"
+          # Set up promotion environment variables
+          export JFROG_URL="${{ vars.JFROG_URL }}"
+          export PROJECT_KEY="${{ vars.PROJECT_KEY }}"
+          export APPLICATION_KEY="$APPLICATION_KEY"
+          export APP_VERSION="${{ env.APP_VERSION }}"
           
-          # Create application version payload with build sources (same format as old working web UI)
-          BUILD_INFO_REPO="bookverse-build-info"
-          if [[ -n "$BUILD_STARTED_TIMESTAMP" && "$BUILD_STARTED_TIMESTAMP" != "null" ]]; then
-            APP_VERSION_PAYLOAD=$(jq -n \
-              --arg version "$APP_VERSION" \
-              --arg tag "$APP_TAG" \
-              --arg build_name "$BUILD_NAME" \
-              --arg build_number "${{ needs.build-test-publish.outputs.build_number }}" \
-              --arg build_info_repo "$BUILD_INFO_REPO" \
-              --arg build_started "$BUILD_STARTED_TIMESTAMP" \
-              '{
-                version: $version,
-                tag: $tag,
-                sources: {
-                  builds: [{
-                    name: $build_name,
-                    number: $build_number,
-                    repository_key: $build_info_repo,
-                    include_dependencies: false,
-                    started: $build_started
-                  }]
-                }
-              }')
-          else
-            APP_VERSION_PAYLOAD=$(jq -n \
-              --arg version "$APP_VERSION" \
-              --arg tag "$APP_TAG" \
-              --arg build_name "$BUILD_NAME" \
-              --arg build_number "${{ needs.build-test-publish.outputs.build_number }}" \
-              --arg build_info_repo "$BUILD_INFO_REPO" \
-              '{
-                version: $version,
-                tag: $tag,
-                sources: {
-                  builds: [{
-                    name: $build_name,
-                    number: $build_number,
-                    repository_key: $build_info_repo,
-                    include_dependencies: false
-                  }]
-                }
-              }')
+          # Get the OIDC token from the previous step's output
+          OIDC_TOKEN="${{ steps.exchange-oidc.outputs.token }}"
+          if [[ -z "$OIDC_TOKEN" ]]; then
+            echo "❌ Failed to get OIDC token from exchange step" >&2
+            exit 1
           fi
+          export APPTRUST_ACCESS_TOKEN="$OIDC_TOKEN"
+          echo "✅ APPTRUST_ACCESS_TOKEN set for promotion library"
           
-          echo "📤 Payload: $APP_VERSION_PAYLOAD"
+          # Source the promotion library
+          source .github/scripts/promote_lib.sh
           
-          # Create application version via AppTrust API
-          RESP_BODY=$(mktemp)
-          HTTP_STATUS=$(curl -sS -L -o "$RESP_BODY" -w "%{http_code}" -X POST \
-            "${{ vars.JFROG_URL }}/apptrust/api/v1/applications/$APPLICATION_KEY/versions?async=false" \
-            -H "Authorization: Bearer $JF_ACCESS_TOKEN" \
-            -H "Content-Type: application/json" \
-            -H "X-JFrog-Project: ${{ vars.PROJECT_KEY }}" \
-            -d "$APP_VERSION_PAYLOAD" \
-            --fail-with-body )
-          echo "🔢 HTTP Status: $HTTP_STATUS"
-          echo "📨 Response Body:"; cat "$RESP_BODY" || true; echo
-          if [ "$HTTP_STATUS" -ge 400 ]; then echo "❌ AppTrust API failed with $HTTP_STATUS"; exit 1; fi
-          rm -f "$RESP_BODY"
+          # Set up lifecycle stages (demo-optimized: promote directly to PROD)
+          export STAGES_STR="DEV QA STAGING PROD"
+          export FINAL_STAGE="PROD"
+          export ALLOW_RELEASE=true
           
-          echo "✅ AppTrust Application Version created successfully"
-          echo "🎯 Version $APP_VERSION is now available in AppTrust"
+          echo "🎯 Demo Mode: Auto-promoting through all stages to PROD"
+          echo "📝 Production Note: Real systems would have approval gates and gradual rollout"
+          
+          # Fetch current status
+          fetch_summary
+          echo "📊 Current stage: ${CURRENT_STAGE:-UNASSIGNED}"
+          
+          # Promote through each stage automatically
+          MAX_PROMOTIONS=4  # Safety limit
+          PROMOTION_COUNT=0
+          
+          while [[ $PROMOTION_COUNT -lt $MAX_PROMOTIONS ]]; do
+            fetch_summary
+            CURRENT_DISPLAY=$(display_stage_for "${CURRENT_STAGE:-}")
+            
+            echo "🔄 Promotion step $((PROMOTION_COUNT + 1)): Currently at $CURRENT_DISPLAY"
+            
+            if [[ "$CURRENT_DISPLAY" == "PROD" ]]; then
+              echo "🎉 Already at PROD - promotion complete!"
+              break
+            fi
+            
+            # Perform one promotion step
+            if advance_one_step; then
+              echo "✅ Promotion step $((PROMOTION_COUNT + 1)) successful"
+              PROMOTION_COUNT=$((PROMOTION_COUNT + 1))
+              
+              # Brief pause between promotions for demo visibility
+              sleep 2
+            else
+              echo "❌ Promotion step $((PROMOTION_COUNT + 1)) failed"
+              exit 1
+            fi
+          done
+          
+          # Final status check
+          fetch_summary
+          FINAL_DISPLAY=$(display_stage_for "${CURRENT_STAGE:-}")
+          echo "🏁 Final promotion status: $FINAL_DISPLAY"
+          
+          if [[ "$FINAL_DISPLAY" == "PROD" ]]; then
+            echo "🎉 Successfully promoted $APP_VERSION to PROD!"
+            echo "📊 Promotion completed in $PROMOTION_COUNT steps"
+          else
+            echo "⚠️ Promotion did not reach PROD (stopped at $FINAL_DISPLAY)"
+            exit 1
+          fi
