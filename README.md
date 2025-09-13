@@ -4,6 +4,10 @@ Small, production-like UI for the BookVerse demo. It consumes the microservice
 APIs and is designed to demonstrate end-to-end CI/CD and promotion with
 JFrog AppTrust.
 
+## Testing Status
+- Testing automatic CI triggers with Docker image + web assets
+- Validating commit filtering, application version creation, and auto-promotion
+
 ## Local development
 
 ```bash
