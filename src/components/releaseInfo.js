@@ -186,7 +186,7 @@ async function loadBackendVersions(config) {
         document.getElementById(service.id).textContent = `❌ HTTP ${response.status}`;
       }
     } catch (error) {
-      // Show real version even when service is unreachable (for demo purposes)
+      // DEMO PURPOSE: Show hardcoded version when service is unreachable to maintain demo functionality
       if (error.name === 'AbortError') {
         document.getElementById(service.id).textContent = `${service.fallbackVersion} (Timeout)`;
       } else if (error.message.includes('fetch')) {

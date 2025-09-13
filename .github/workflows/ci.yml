@@ -237,6 +237,25 @@ jobs:
           jf rt dp --project "${{ vars.PROJECT_KEY }}" "$IMAGE_NAME" "$DOCKER_REPO" --build-name "$BUILD_NAME" --build-number "$BUILD_NUMBER"
           echo "✅ Built and pushed Docker image (with build-info)"
 
+      - name: "[Build Info] Associate Docker Image"
+        run: |
+          # Critical: Associate Docker image with build info for AppTrust application version creation
+          # This step was missing and caused "source artifact is missing" errors
+          
+          echo "🔗 Associating Docker image with build info..."
+          
+          # Associate Docker image with build info
+          IMAGE_DIGEST=$(jf rt curl -X GET "/api/docker/$DOCKER_REPO/v2/$SERVICE_NAME/$IMAGE_TAG/manifest" | jq -r '.digest // empty')
+          if [[ -n "$IMAGE_DIGEST" && "$IMAGE_DIGEST" != "null" ]]; then
+            echo "📦 Docker Image digest: $IMAGE_DIGEST"
+            jf rt build-docker-create "$DOCKER_REPO" --image-file "$IMAGE_NAME" --build-name "$BUILD_NAME" --build-number "$BUILD_NUMBER" --project "${{ vars.PROJECT_KEY }}"
+          else
+            echo "⚠️ Could not resolve Docker image digest, using image name"
+            jf rt build-docker-create "$DOCKER_REPO" --image-file "$IMAGE_NAME" --build-name "$BUILD_NAME" --build-number "$BUILD_NUMBER" --project "${{ vars.PROJECT_KEY }}"
+          fi
+          
+          echo "✅ Docker image associated with build info"
+
       - name: "[Build Info] Publish"
         run: |
           jf rt bag --project "${{ vars.PROJECT_KEY }}" "$BUILD_NAME" "$BUILD_NUMBER"
