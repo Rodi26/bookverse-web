@@ -3,11 +3,11 @@ import { renderHome } from './ui/home.js'
 import { renderCatalog } from './ui/catalog.js'
 import { renderBook } from './ui/book.js'
 import { renderCart } from './ui/cart.js'
-import { renderLogin, renderCallback, handleAuthCallback, handleSilentCallback, initAuthHandlers } from './ui/auth.js'
+// Auth imports removed for demo
 import { initReleaseInfo } from './components/releaseInfo.js'
 import { httpRequest, httpJson } from './services/http.js'
 import { listBooks, getBook } from './services/inventory.js'
-import authService from './services/auth.js'
+// Auth service removed for demo
 
 async function bootstrap() {
   const app = document.getElementById('app')
@@ -16,46 +16,22 @@ async function bootstrap() {
     return
   }
 
-  // Initialize authentication service
-  const config = window.__BOOKVERSE_CONFIG__
-  if (config?.oidc) {
-    try {
-      await authService.initialize(config.oidc)
-      // Debug: Authentication service initialized
-    } catch (error) {
-      console.error('❌ Failed to initialize authentication:', error)
-    }
-  } else {
-    console.warn('⚠️ No OIDC configuration found')
-  }
+  // Authentication disabled for demo
+  console.log('🎯 Demo mode: Authentication disabled')
 
-  // Initialize router with authentication routes
+  // Initialize router (demo mode - no authentication)
   initRouter(app, {
     '/': renderCatalog,
     '/home': renderHome,
     '/catalog': renderCatalog,
     '/book/:id': renderBook,
-    '/cart': renderCart,
-    '/login': renderLogin,
-    '/callback': renderCallback,
-    '/silent-callback': () => {
-      handleSilentCallback()
-      return '<div>Silent callback processed</div>'
-    }
+    '/cart': renderCart
   })
 
-  // Handle special routes
-  const currentPath = location.hash.replace(/^#/, '') || '/'
-  if (currentPath === '/callback') {
-    await handleAuthCallback()
-  } else if (currentPath === '/silent-callback') {
-    await handleSilentCallback()
-  } else if (!location.hash) {
+  // Initialize default route for demo
+  if (!location.hash) {
     navigateTo('/')
   }
-
-  // Initialize authentication UI handlers
-  initAuthHandlers()
   
   // Initialize other components
   initReleaseInfo()
@@ -66,7 +42,7 @@ async function bootstrap() {
   window.listBooks = listBooks
   window.getBook = getBook
   window.navigateTo = navigateTo
-  window.authService = authService
+  // authService removed for demo
   
   // Debug: BookVerse functions exposed globally
 }

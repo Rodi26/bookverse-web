@@ -136,7 +136,7 @@ async function loadBackendVersions(config) {
   };
   
   const services = [
-    { id: 'platform-version', name: 'Platform', url: config.platformBaseUrl || 'http://localhost:8080', healthPath: '/health', fallbackVersion: realVersions['platform-version'] },
+    { id: 'platform-version', name: 'Platform', url: config.platformBaseUrl || '', healthPath: '/health', fallbackVersion: realVersions['platform-version'] },
     { id: 'inventory-version', name: 'Inventory', url: config.inventoryBaseUrl, healthPath: '/health', fallbackVersion: realVersions['inventory-version'] },
     { id: 'recommendations-version', name: 'Recommendations', url: config.recommendationsBaseUrl, healthPath: '/health', fallbackVersion: realVersions['recommendations-version'] },
     { id: 'checkout-version', name: 'Checkout', url: config.checkoutBaseUrl, healthPath: '/health', fallbackVersion: realVersions['checkout-version'] }

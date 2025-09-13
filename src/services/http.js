@@ -1,7 +1,7 @@
 // Circuit breaker removed - was causing more issues than benefits
 // Modern browsers and Kubernetes provide sufficient resilience
 
-import authService from './auth.js'
+// Auth service removed for demo
 
 function serviceBase(service) {
   // If service is empty, use relative URLs (nginx proxy handles routing)
@@ -14,19 +14,29 @@ function serviceBase(service) {
   return ''
 }
 
+// Generate UUID with fallback for older browsers
+function generateUUID() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID()
+  }
+  // Fallback for older browsers
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0
+    const v = c == 'x' ? r : (r & 0x3 | 0x8)
+    return v.toString(16)
+  })
+}
+
 function withHeaders(opts = {}) {
   const headers = new Headers(opts.headers || {})
-  headers.set('X-Request-Id', crypto.randomUUID())
+  headers.set('X-Request-Id', generateUUID())
   
-  // Add authentication token if available
-  const token = authService.getAccessToken()
-  if (token) {
-    headers.set('Authorization', `Bearer ${token}`)
-  }
+  // Authentication disabled for demo
+  // No authorization headers needed
   
   // Minimal traceparent: version 00, random 16-byte trace id, 8-byte span id
-  const traceId = [...crypto.getRandomValues(new Uint8Array(16))].map(b => b.toString(16).padStart(2, '0')).join('')
-  const spanId = [...crypto.getRandomValues(new Uint8Array(8))].map(b => b.toString(16).padStart(2, '0')).join('')
+  const traceId = generateUUID().replace(/-/g, '').substring(0, 32)
+  const spanId = generateUUID().replace(/-/g, '').substring(0, 16)
   headers.set('traceparent', `00-${traceId}-${spanId}-01`)
   return { ...opts, headers }
 }

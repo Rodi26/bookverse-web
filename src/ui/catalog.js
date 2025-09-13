@@ -3,29 +3,13 @@ import { getTrending } from '../services/recommendations.js'
 import { addToCart, removeFromCart, isInCart, getCart } from '../store/cart.js'
 import { navigateTo } from '../router.js'
 import { resolveImageUrl } from '../util/imageUrl.js'
-import { renderAuthStatus } from './auth.js'
+// Auth status removed for demo
 
-import authService from '../services/auth.js'
+// Auth service removed for demo
 
 export function renderCatalog(rootEl) {
-  // Check authentication status
-  if (!authService.isAuthenticated()) {
-    rootEl.innerHTML = `
-      <div class="auth-required">
-        <div class="auth-card">
-          <h2>Authentication Required</h2>
-          <p>Please sign in to access the BookVerse catalog.</p>
-          <button id="auth-login-redirect-btn" class="login-button">Sign In</button>
-        </div>
-      </div>
-    `
-    
-    // Add click handler for sign in button
-    document.getElementById('auth-login-redirect-btn')?.addEventListener('click', () => {
-      navigateTo('/login')
-    })
-    return
-  }
+  // Demo mode: Skip authentication check
+  console.log('🎯 Rendering catalog in demo mode (no authentication required)')
   
   rootEl.innerHTML = layout('Loading...')
   let allBooks = []
@@ -299,7 +283,7 @@ function layout(content, hasMore = false) {
         <button id="recommendations-btn" class="nav-btn">✨ Trending</button>
         <button id="cart-btn" class="nav-btn cart-btn">Cart</button>
       </div>
-      ${renderAuthStatus()}
+      <!-- Auth status removed for demo -->
     </nav>
     
     <div class="banner">

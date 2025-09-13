@@ -123,17 +123,24 @@ curl http://bookverse.local/health
 
 ### Local Development
 1. Start services with `docker-compose up`
-2. Access via `http://localhost:8080`
+2. Access via `http://bookverse.demo`
 3. Verify all API calls work through nginx proxy
 
-### Port-Forward Testing
-1. Port-forward web service: `kubectl port-forward svc/platform-web 8080:80`
-2. Access via `http://localhost:8080`
-3. Verify books load correctly
+### Resilient Demo Testing
+1. One-command setup: `./scripts/quick-demo.sh`
+2. This automatically:
+   - Uses existing JFROG_URL environment variable
+   - Sets up K8s pull user credentials
+   - Creates ingress resources
+   - Adds domains to /etc/hosts
+   - Starts resilient port-forward
+3. Access via `http://bookverse.demo`
+4. Verify books load correctly with professional URL
+5. Test resilience: `kubectl delete pod -l app=platform-web -n bookverse-prod`
 
 ### Production Testing
 1. Deploy to staging environment
-2. Access via ingress domain
+2. Access via real ingress domain
 3. Run end-to-end tests
 4. Monitor error rates and response times
 
