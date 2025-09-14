@@ -417,95 +417,57 @@ jobs:
 
       - name: "[Create] Application Version"
         run: |
-          set -euo pipefail
-          echo "🚀 Creating AppTrust Application Version"
-          echo "📦 Application: $APPLICATION_KEY"
-          echo "🔢 Version: $APP_VERSION"
-          echo "🏗️ Build: $BUILD_NAME"
-          echo "⏰ Build Started: $BUILD_STARTED_TIMESTAMP"
+          echo "🚀 Creating application version ${{ env.APP_VERSION }}"
           
-          # Determine application version tag (same as old working web UI)
-          TAG_OPTIONS=(
-            "release"
-            "hotfix"
-            "feature"
-            "bugfix"
-            "enhancement"
-            "security"
-            "performance"
-            "refactor"
-            "experimental"
-            "maintenance"
-            "integration"
-            "documentation"
-            "stable"
-            "beta"
-          )
+          # Create application version using correct AppTrust API payload structure
+          # Based on working implementation from inventory service
+          BASE="${{ vars.JFROG_URL }}/apptrust/api/v1"
+          APP_KEY="$APPLICATION_KEY"
+          
+          # Generate demo tag (similar to inventory service)
+          TAG_OPTIONS=(release hotfix feature bugfix enhancement security performance refactor)
           TAG_INDEX=$((${GITHUB_RUN_NUMBER:-0} % ${#TAG_OPTIONS[@]}))
           APP_TAG="${TAG_OPTIONS[$TAG_INDEX]}"
-          echo "🏷️ Application Version Tag (demo simulation): $APP_TAG"
           
-          # Create application version payload with build sources (same format as old working web UI)
-          BUILD_INFO_REPO="bookverse-build-info"
-          if [[ -n "$BUILD_STARTED_TIMESTAMP" && "$BUILD_STARTED_TIMESTAMP" != "null" ]]; then
-            APP_VERSION_PAYLOAD=$(jq -n \
-              --arg version "$APP_VERSION" \
-              --arg tag "$APP_TAG" \
-              --arg build_name "${{ needs.build-test-publish.outputs.build_name }}" \
-              --arg build_number "${{ needs.build-test-publish.outputs.build_number }}" \
-              --arg build_info_repo "$BUILD_INFO_REPO" \
-              --arg build_started "$BUILD_STARTED_TIMESTAMP" \
-              '{
-                version: $version,
-                tag: $tag,
-                sources: {
-                  builds: [{
-                    name: $build_name,
-                    number: $build_number,
-                    repository_key: $build_info_repo,
-                    include_dependencies: false,
-                    started: $build_started
-                  }]
-                }
-              }')
-          else
-            APP_VERSION_PAYLOAD=$(jq -n \
-              --arg version "$APP_VERSION" \
-              --arg tag "$APP_TAG" \
-              --arg build_name "${{ needs.build-test-publish.outputs.build_name }}" \
-              --arg build_number "${{ needs.build-test-publish.outputs.build_number }}" \
-              --arg build_info_repo "$BUILD_INFO_REPO" \
-              '{
-                version: $version,
-                tag: $tag,
-                sources: {
-                  builds: [{
-                    name: $build_name,
-                    number: $build_number,
-                    repository_key: $build_info_repo,
-                    include_dependencies: false
-                  }]
-                }
-              }')
-          fi
+          # Create application version payload using exact same approach as inventory service
+          # Use the build name from the build-test-publish job where build info was published
+          ACTUAL_BUILD_NAME="${{ needs.build-test-publish.outputs.build_name }}"
           
-          echo "📤 Payload: $APP_VERSION_PAYLOAD"
+          # Create payload using string concatenation (same as inventory service)
+          APP_VERSION_PAYLOAD='{"version":"'$APP_VERSION'","tag":"'$APP_TAG'","sources":{"builds":[{"name":"'$ACTUAL_BUILD_NAME'","number":"'$BUILD_NUMBER'","repository_key":"'${{ vars.PROJECT_KEY }}'-build-info","include_dependencies":false}]}}'
           
-          # Create application version via AppTrust API
+          echo "📋 Creating application version with payload:"
+          echo "$APP_VERSION_PAYLOAD" | jq . || echo "$APP_VERSION_PAYLOAD"
+          
+          # Call AppTrust API using exact same approach as inventory service
           RESP_BODY=$(mktemp)
           HTTP_STATUS=$(curl -sS -L -o "$RESP_BODY" -w "%{http_code}" -X POST \
-            "${{ vars.JFROG_URL }}/apptrust/api/v1/applications/$APPLICATION_KEY/versions?async=false" \
-            -H "Authorization: Bearer $JF_ACCESS_TOKEN" \
+            "$BASE/applications/$APP_KEY/versions?async=false" \
+            -H "Authorization: Bearer ${{ steps.exchange-oidc.outputs.token }}" \
             -H "Content-Type: application/json" \
             -H "X-JFrog-Project: ${{ vars.PROJECT_KEY }}" \
             -d "$APP_VERSION_PAYLOAD" \
-            --fail-with-body )
-          echo "🔢 HTTP Status: $HTTP_STATUS"
-          echo "📨 Response Body:"; cat "$RESP_BODY" || true; echo
-          if [ "$HTTP_STATUS" -ge 400 ]; then echo "❌ AppTrust API failed with $HTTP_STATUS"; exit 1; fi
-          rm -f "$RESP_BODY"
+            --fail-with-body)
           
-          echo "✅ AppTrust Application Version created successfully"
+          echo "🔢 HTTP Status: $HTTP_STATUS"
+          echo "📨 Response Body:"
+          cat "$RESP_BODY" | jq . 2>/dev/null || cat "$RESP_BODY"
+          echo ""
+          
+          if [[ "$HTTP_STATUS" -ge 200 && "$HTTP_STATUS" -lt 300 ]]; then
+            echo "✅ Created application version $APP_VERSION"
+          else
+            echo "⚠️ Application version creation returned HTTP $HTTP_STATUS"
+            # For demo purposes, continue even if version already exists
+            if [[ "$HTTP_STATUS" == "409" ]]; then
+              echo "📝 Version $APP_VERSION already exists, continuing with promotion..."
+            else
+              echo "❌ Failed to create application version" >&2
+              rm -f "$RESP_BODY"
+              exit 1
+            fi
+          fi
+          rm -f "$RESP_BODY"
 
       - name: "[Auto-Promote] Through Stages"
         env:
