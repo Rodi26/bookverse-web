@@ -282,14 +282,21 @@ jobs:
             # Parse the UI URL from JFrog CLI log output instead of non-existent JSON field
             BUILD_UI_URL=$(echo "$BUILD_PUBLISH_RESULT" | grep -o 'https://[^[:space:]]*builds/[^[:space:]]*' | head -1 || echo "")
             if [[ -n "$BUILD_UI_URL" ]]; then
-              # Extract timestamp from URL path: .../builds/SERVICE_NAME/BUILD_NUMBER/TIMESTAMP
-              BUILD_TIMESTAMP=$(echo "$BUILD_UI_URL" | sed -n 's|.*/builds/[^/]*/[^/]*/\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}\.[0-9]\{3\}Z\).*|\1|p')
-              if [[ -n "$BUILD_TIMESTAMP" ]]; then
-                echo "BUILD_STARTED_TIMESTAMP=$BUILD_TIMESTAMP" >> $GITHUB_ENV
-                echo "build_started_timestamp=$BUILD_TIMESTAMP" >> $GITHUB_OUTPUT
-                echo "✅ Extracted build timestamp: $BUILD_TIMESTAMP"
+              # Extract epoch milliseconds from UI URL: .../builds/NAME/NUMBER/TIMESTAMP/published
+              EPOCH_MS=$(echo "$BUILD_UI_URL" | sed -n 's|.*/builds/[^/]*/[^/]*/\([0-9]*\)/published.*|\1|p')
+              
+              if [[ -n "$EPOCH_MS" && "$EPOCH_MS" =~ ^[0-9]+$ ]]; then
+                # Convert to JFrog's exact timestamp format: YYYY-MM-DDTHH:MM:SS.mmm+0000
+                EPOCH_SEC=$((EPOCH_MS / 1000))
+                MILLISECS=$((EPOCH_MS % 1000))
+                BUILD_STARTED_TIMESTAMP=$(date -u -r "$EPOCH_SEC" "+%Y-%m-%dT%H:%M:%S" 2>/dev/null || date -u -d "@$EPOCH_SEC" "+%Y-%m-%dT%H:%M:%S")
+                BUILD_STARTED_TIMESTAMP="${BUILD_STARTED_TIMESTAMP}.$(printf "%03d" $MILLISECS)+0000"
+                
+                echo "BUILD_STARTED_TIMESTAMP=$BUILD_STARTED_TIMESTAMP" >> $GITHUB_ENV
+                echo "build_started_timestamp=$BUILD_STARTED_TIMESTAMP" >> $GITHUB_OUTPUT
+                echo "✅ Extracted timestamp from build publish result: $BUILD_STARTED_TIMESTAMP"
               else
-                echo "⚠️ Could not extract timestamp from build UI URL: $BUILD_UI_URL"
+                echo "⚠️ Could not extract epoch milliseconds from build UI URL: $BUILD_UI_URL"
                 FALLBACK_TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)
                 echo "BUILD_STARTED_TIMESTAMP=$FALLBACK_TIMESTAMP" >> $GITHUB_ENV
                 echo "build_started_timestamp=$FALLBACK_TIMESTAMP" >> $GITHUB_OUTPUT
