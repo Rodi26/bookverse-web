@@ -419,27 +419,41 @@ jobs:
         run: |
           echo "🚀 Creating application version ${{ env.APP_VERSION }}"
           
-          # Create application version using correct AppTrust API payload structure
-          # Based on working implementation from inventory service
+          # Create application version using AppTrust API payload structure
+          # Adapted from working inventory service pattern for web service
           BASE="${{ vars.JFROG_URL }}/apptrust/api/v1"
           APP_KEY="$APPLICATION_KEY"
           
-          # Generate demo tag (similar to inventory service)
-          TAG_OPTIONS=(release hotfix feature bugfix enhancement security performance refactor)
+          # Generate demo tag for web UI releases
+          TAG_OPTIONS=(
+            "release"
+            "hotfix" 
+            "feature"
+            "bugfix"
+            "enhancement"
+            "security"
+            "performance"
+            "refactor"
+            "experimental"
+            "maintenance"
+            "integration"
+            "documentation"
+            "stable"
+            "beta"
+          )
           TAG_INDEX=$((${GITHUB_RUN_NUMBER:-0} % ${#TAG_OPTIONS[@]}))
           APP_TAG="${TAG_OPTIONS[$TAG_INDEX]}"
           
-          # Create application version payload using exact same approach as inventory service
           # Use the build name from the build-test-publish job where build info was published
           ACTUAL_BUILD_NAME="${{ needs.build-test-publish.outputs.build_name }}"
           
-          # Create payload using string concatenation (same as inventory service)
+          # Create payload using string concatenation (adapted from inventory service)
           APP_VERSION_PAYLOAD='{"version":"'$APP_VERSION'","tag":"'$APP_TAG'","sources":{"builds":[{"name":"'$ACTUAL_BUILD_NAME'","number":"'$BUILD_NUMBER'","repository_key":"'${{ vars.PROJECT_KEY }}'-build-info","include_dependencies":false}]}}'
           
           echo "📋 Creating application version with payload:"
           echo "$APP_VERSION_PAYLOAD" | jq . || echo "$APP_VERSION_PAYLOAD"
           
-          # Call AppTrust API using exact same approach as inventory service
+          # Call AppTrust API using approach adapted from inventory service
           RESP_BODY=$(mktemp)
           HTTP_STATUS=$(curl -sS -L -o "$RESP_BODY" -w "%{http_code}" -X POST \
             "$BASE/applications/$APP_KEY/versions?async=false" \
