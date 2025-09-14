@@ -62,7 +62,7 @@ jobs:
       id-token: write
     outputs:
       build_name: ${{ steps.set-build-info.outputs.build_name }}
-      build_started_timestamp: ${{ env.BUILD_STARTED_TIMESTAMP }}
+      build_started_timestamp: ${{ steps.publish-build-info.outputs.build_started_timestamp }}
       build_number: ${{ steps.set-build-info.outputs.build_number }}
       app_version: ${{ steps.set-app-version.outputs.app_version }}
       jf_access_token: ${{ steps.exchange-oidc.outputs.token }}
@@ -255,6 +255,7 @@ jobs:
           echo "✅ Built and pushed Docker image (OIDC docker push + build-info)"
 
       - name: "[Build Info] Publish"
+        id: publish-build-info
         run: |
           # Associate the pushed Docker image with the build-info before publishing
           REPO_KEY="${{ vars.PROJECT_KEY }}-$SERVICE_NAME-internal-docker-nonprod-local"
@@ -288,14 +289,19 @@ jobs:
               BUILD_TIMESTAMP=$(echo "$BUILD_UI_URL" | sed -n 's|.*/builds/[^/]*/[^/]*/\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}\.[0-9]\{3\}Z\).*|\1|p')
               if [[ -n "$BUILD_TIMESTAMP" ]]; then
                 echo "BUILD_STARTED_TIMESTAMP=$BUILD_TIMESTAMP" >> $GITHUB_ENV
+                echo "build_started_timestamp=$BUILD_TIMESTAMP" >> $GITHUB_OUTPUT
                 echo "✅ Extracted build timestamp: $BUILD_TIMESTAMP"
               else
                 echo "⚠️ Could not extract timestamp from build UI URL: $BUILD_UI_URL"
-                echo "BUILD_STARTED_TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)" >> $GITHUB_ENV
+                FALLBACK_TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)
+                echo "BUILD_STARTED_TIMESTAMP=$FALLBACK_TIMESTAMP" >> $GITHUB_ENV
+                echo "build_started_timestamp=$FALLBACK_TIMESTAMP" >> $GITHUB_OUTPUT
               fi
             else
               echo "⚠️ Could not extract build UI URL from JFrog CLI output"
-              echo "BUILD_STARTED_TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)" >> $GITHUB_ENV
+              FALLBACK_TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)
+              echo "BUILD_STARTED_TIMESTAMP=$FALLBACK_TIMESTAMP" >> $GITHUB_ENV
+              echo "build_started_timestamp=$FALLBACK_TIMESTAMP" >> $GITHUB_OUTPUT
             fi
             echo "✅ Build info published successfully"
           else
@@ -320,6 +326,7 @@ jobs:
       SERVICE_NAME: "web"
       APPLICATION_KEY: "bookverse-web"
       APP_VERSION: ${{ needs.build-test-publish.outputs.app_version }}
+      BUILD_STARTED_TIMESTAMP: ${{ needs.build-test-publish.outputs.build_started_timestamp }}
 
     steps:
       - name: "[Setup] Checkout"
