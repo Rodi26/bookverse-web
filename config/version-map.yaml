@@ -2,7 +2,6 @@ applications:
   - key: bookverse-web
     seeds:
       application: 2.4.16
-      build: 3.7.25
     packages:
       - type: docker
         name: web
