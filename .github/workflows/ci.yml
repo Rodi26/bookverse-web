@@ -22,7 +22,7 @@ on:
 
 jobs:
   analyze-commit:
-    name: "Demo: Analyze Commit (Demo-Optimized)"
+    name: "Demo: Analyze Commit (Shared Script)"
     runs-on: ubuntu-latest
     outputs:
       create_app_version: ${{ steps.demo-filter.outputs.create_app_version }}
@@ -33,22 +33,29 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 2
+
+      - name: "[Setup] Checkout bookverse-infra for shared scripts"
+        uses: actions/checkout@v4
+        with:
+          repository: yonatanp-jfrog/bookverse-infra
+          path: bookverse-infra
+          token: ${{ secrets.GITHUB_TOKEN }}
       
-      - name: "[Demo] Commit Analysis (Optimized for Visibility)"
+      - name: "[Demo] Commit Analysis (Shared Script - Web Adapted)"
         id: demo-filter
         env:
           GITHUB_EVENT_INPUTS_FORCE_APP_VERSION: ${{ inputs.force_app_version }}
         run: |
-          echo "🎯 DEMO MODE: Analyzing commit for CI/CD pipeline demonstration"
+          echo "🎯 WEB SERVICE: Analyzing commit using shared bookverse-devops script"
           echo "📝 Commit: ${GITHUB_SHA:0:8}"
           echo "💬 Message: $(git log -1 --pretty=%B)"
           echo "📁 Changed files: $(git diff --name-only HEAD~1 | wc -l) files"
-          echo "🏭 Production note: Real systems would use conservative defaults"
+          echo "🌐 Frontend note: Web services create application versions for UI releases"
           echo ""
           
-          # Use our commit analysis script
-          chmod +x ./scripts/analyze-commit.sh
-          ./scripts/analyze-commit.sh
+          # Use shared analyze-commit script from bookverse-infra
+          chmod +x bookverse-infra/libraries/bookverse-devops/scripts/analyze-commit.sh
+          bookverse-infra/libraries/bookverse-devops/scripts/analyze-commit.sh
 
   build-test-publish:
     name: "Build & Test (Always Runs)"
@@ -65,11 +72,18 @@ jobs:
       build_started_timestamp: ${{ steps.publish-build-info.outputs.build_started_timestamp }}
       build_number: ${{ steps.set-build-info.outputs.build_number }}
       app_version: ${{ steps.set-app-version.outputs.app_version }}
-      jf_access_token: ${{ steps.exchange-oidc.outputs.token }}
+      jf_oidc_token: ${{ steps.exchange-oidc.outputs.token }}
 
     steps:
       - name: "[Setup] Checkout"
         uses: actions/checkout@v4
+
+      - name: "[Setup] Checkout bookverse-infra for shared scripts"
+        uses: actions/checkout@v4
+        with:
+          repository: yonatanp-jfrog/bookverse-infra
+          path: bookverse-infra
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: "[Info] Trigger Information"
         run: |
@@ -114,60 +128,18 @@ jobs:
           jf c show
           jf rt ping
 
-      - name: "[Auth] Exchange OIDC and persist JF access token"
+      - name: "[Auth] OIDC Token Exchange (bookverse-devops shared script)"
         id: exchange-oidc
-        env:
-          JF_URL: ${{ vars.JFROG_URL }}
-          PROJECT: ${{ vars.PROJECT_KEY }}
-          PROVIDER_NAME: bookverse-web-github
         run: |
-          set -euo pipefail
-          if ! command -v jq >/dev/null 2>&1; then sudo apt-get update -y && sudo apt-get install -y jq; fi
-          if [[ -z "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" || -z "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" ]]; then
-            echo "❌ Missing GitHub OIDC request env vars" >&2; exit 1; fi
-          GH_ID_TOKEN=$(curl -sS -H "Authorization: Bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
-            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=${JF_URL}" | jq -r .value)
-          if [[ -z "$GH_ID_TOKEN" || "$GH_ID_TOKEN" == "null" ]]; then echo "❌ Failed to fetch GitHub ID token" >&2; exit 1; fi
-          PAYLOAD=$(jq -n --arg jwt "$GH_ID_TOKEN" \
-            --arg provider_name "$PROVIDER_NAME" \
-            --arg project_key "$PROJECT" \
-            --arg job_id "${{ github.job }}" \
-            --arg run_id "${{ github.run_id }}" \
-            --arg repo "https://github.com/${{ github.repository }}" \
-            --arg revision "${{ github.sha }}" \
-            --arg branch "${{ github.ref_name }}" \
-            '{
-              grant_type:"urn:ietf:params:oauth:grant-type:token-exchange",
-              subject_token_type:"urn:ietf:params:oauth:token-type:id_token",
-              subject_token:$jwt,
-              provider_name:$provider_name,
-              project_key:$project_key,
-              job_id:$job_id,
-              run_id:$run_id,
-              repo:$repo,
-              revision:$revision,
-              branch:$branch
-            }')
-          TOKEN=$(curl -sS -X POST -H "Content-Type: application/json" -d "$PAYLOAD" "$JF_URL/access/api/v1/oidc/token" | jq -r .access_token)
-          if [[ -z "$TOKEN" || "$TOKEN" == "null" ]]; then echo "❌ Failed to exchange OIDC token" >&2; exit 1; fi
-          echo "JF_OIDC_TOKEN=$TOKEN" >> $GITHUB_ENV
-          echo "JF_ACCESS_TOKEN=$TOKEN" >> $GITHUB_ENV
-          echo "token=$TOKEN" >> $GITHUB_OUTPUT
-          
-          # Extract Docker username from token (same as inventory)
-          PAY_PAD=$(echo "$TOKEN" | cut -d. -f2)
-          PAY_PAD="${PAY_PAD}$(printf '%*s' $(( (4 - ${#PAY_PAD} % 4) % 4 )) | tr ' ' '=')"
-          CLAIMS=$(echo "$PAY_PAD" | tr '_-' '/+' | base64 -d 2>/dev/null || true)
-          DOCKER_USER=$(echo "$CLAIMS" | jq -r '.username // .sub // .subject // empty' 2>/dev/null || true)
-          # If sub is in the form jfac@.../users/<username>, extract the trailing <username>
-          if [[ "$DOCKER_USER" == *"/users/"* ]]; then
-            DOCKER_USER=${DOCKER_USER##*/users/}
-          fi
-          if [[ -z "$DOCKER_USER" || "$DOCKER_USER" == "null" ]]; then DOCKER_USER="oauth2_access_token"; fi
-          echo "Using docker username: $DOCKER_USER"
-          REGISTRY_URL="${{ vars.DOCKER_REGISTRY }}"
-          echo "$TOKEN" | docker login "$REGISTRY_URL" -u "$DOCKER_USER" --password-stdin
-          echo "✅ JFrog access token obtained and Docker login completed"
+          echo "🔐 Using bookverse-devops shared OIDC exchange script for web service"
+          # Use shared script to eliminate ~40 lines of duplicate OIDC logic
+          bookverse-infra/libraries/bookverse-devops/scripts/exchange-oidc-token.sh \
+            --service-name "web" \
+            --provider-name "bookverse-web-github" \
+            --jfrog-url "${{ vars.JFROG_URL }}" \
+            --docker-registry "${{ vars.DOCKER_REGISTRY }}" \
+            --verbose
+          echo "✅ OIDC token exchange completed using shared bookverse-devops script"
 
       - name: "[Setup] Determine SemVer"
         id: set-app-version
@@ -176,9 +148,9 @@ jobs:
           SERVICE_NAME=${SERVICE_NAME:-$(echo ${{ github.event.repository.name }} | sed 's/bookverse-//')}
           APPLICATION_KEY="bookverse-$SERVICE_NAME"
           
-          # Use the unified semver determination script
-          chmod +x ./scripts/determine-semver.sh
-          SEMVER_OUTPUT=$(./scripts/determine-semver.sh \
+          # Use the shared semver determination script from bookverse-devops
+          chmod +x bookverse-infra/libraries/bookverse-devops/scripts/determine-semver.sh
+          SEMVER_OUTPUT=$(bookverse-infra/libraries/bookverse-devops/scripts/determine-semver.sh \
             --application-key "$APPLICATION_KEY" \
             --version-map "./config/version-map.yaml" \
             --jfrog-url "${{ vars.JFROG_URL }}" \
@@ -336,6 +308,13 @@ jobs:
       - name: "[Setup] Checkout"
         uses: actions/checkout@v4
 
+      - name: "[Setup] Checkout bookverse-infra for shared scripts"
+        uses: actions/checkout@v4
+        with:
+          repository: yonatanp-jfrog/bookverse-infra
+          path: bookverse-infra
+          token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: "[Setup] JFrog CLI"
         uses: EyalDelarea/setup-jfrog-cli@swampUpAppTrust
         with:
@@ -354,32 +333,18 @@ jobs:
           echo "👤 Triggered by: ${{ github.actor }}"
           echo "🕐 Timestamp: $(date -u)"
 
-      - name: "[Auth] Exchange OIDC and persist JF access token"
+      - name: "[Auth] OIDC Token Exchange (bookverse-devops shared script)"
         id: exchange-oidc
-        env:
-          JF_URL: ${{ vars.JFROG_URL }}
-          PROJECT: ${{ vars.PROJECT_KEY }}
-          PROVIDER_NAME: bookverse-web-github
         run: |
-          set -euo pipefail
-          # Ensure jq
-          if ! command -v jq >/dev/null 2>&1; then sudo apt-get update -y && sudo apt-get install -y jq; fi
-          # 1) Get GitHub OIDC ID token (audience -> JFrog URL)
-          if [[ -z "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" || -z "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" ]]; then
-            echo "❌ Missing GitHub OIDC request env vars" >&2; exit 1; fi
-          GH_ID_TOKEN=$(curl -sS -H "Authorization: Bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
-            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=${JF_URL}" | jq -r .value)
-          if [[ -z "$GH_ID_TOKEN" || "$GH_ID_TOKEN" == "null" ]]; then echo "❌ Failed to fetch GitHub ID token" >&2; exit 1; fi
-          # 2) Exchange at JFrog Access for access token
-          PAYLOAD=$(jq -n --arg jwt "$GH_ID_TOKEN" \
-            '{grant_type: "urn:ietf:params:oauth:grant-type:token-exchange", subject_token: $jwt, subject_token_type: "urn:ietf:params:oauth:token-type:id_token", provider_name: env.PROVIDER_NAME}')
-          JF_ACCESS_TOKEN=$(curl -sS -X POST "${JF_URL}/access/api/v1/oidc/token" \
-            -H "Content-Type: application/json" -d "$PAYLOAD" | jq -r .access_token)
-          if [[ -z "$JF_ACCESS_TOKEN" || "$JF_ACCESS_TOKEN" == "null" ]]; then echo "❌ Failed to exchange OIDC token" >&2; exit 1; fi
-          # 3) Persist for subsequent steps
-          echo "JF_ACCESS_TOKEN=$JF_ACCESS_TOKEN" >> $GITHUB_ENV
-          echo "token=$JF_ACCESS_TOKEN" >> $GITHUB_OUTPUT
-          echo "✅ JFrog access token obtained and persisted"
+          echo "🔐 Using bookverse-devops shared OIDC exchange script for web service promotion"
+          # Use shared script to eliminate ~25 lines of duplicate OIDC logic
+          bookverse-infra/libraries/bookverse-devops/scripts/exchange-oidc-token.sh \
+            --service-name "web" \
+            --provider-name "bookverse-web-github" \
+            --jfrog-url "${{ vars.JFROG_URL }}" \
+            --docker-registry "${{ vars.DOCKER_REGISTRY }}" \
+            --verbose
+          echo "✅ OIDC token exchange completed using shared bookverse-devops script"
 
       - name: "[Setup] Install Python dependencies"
         run: |
@@ -392,21 +357,21 @@ jobs:
           SERVICE_NAME=${SERVICE_NAME:-$(echo ${{ github.event.repository.name }} | sed 's/bookverse-//')}
           APPLICATION_KEY="bookverse-$SERVICE_NAME"
           
-          # Use the persisted JF_ACCESS_TOKEN from the auth step
-          if [[ -z "${JF_ACCESS_TOKEN:-}" ]]; then
-            echo "❌ Missing JF_ACCESS_TOKEN. Ensure OIDC exchange step succeeded." >&2
+          # Use the persisted JF_OIDC_TOKEN from the auth step
+          if [[ -z "${JF_OIDC_TOKEN:-}" ]]; then
+            echo "❌ Missing JF_OIDC_TOKEN. Ensure OIDC exchange step succeeded." >&2
             exit 1
           fi
           
           echo "✅ Using persisted JFrog access token for semver determination"
           
-          # Use the unified semver determination script
-          chmod +x ./scripts/determine-semver.sh
-          SEMVER_OUTPUT=$(./scripts/determine-semver.sh \
+          # Use the shared semver determination script from bookverse-devops
+          chmod +x bookverse-infra/libraries/bookverse-devops/scripts/determine-semver.sh
+          SEMVER_OUTPUT=$(bookverse-infra/libraries/bookverse-devops/scripts/determine-semver.sh \
             --application-key "$APPLICATION_KEY" \
             --version-map "./config/version-map.yaml" \
             --jfrog-url "${{ vars.JFROG_URL }}" \
-            --jfrog-token "$JF_ACCESS_TOKEN" \
+            --jfrog-token "$JF_OIDC_TOKEN" \
             --project-key "${{ vars.PROJECT_KEY }}" \
             --packages "$SERVICE_NAME" \
             --verbose)
