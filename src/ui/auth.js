@@ -195,6 +195,10 @@ export async function handleSilentCallback() {
     await authService.handleSilentCallback()
     // Debug: Silent authentication callback successful
   } catch (error) {
-    console.error('❌ Silent authentication callback failed:', error)
+    console.error('❌ AUTHENTICATION ERROR: Silent authentication callback failed:', error)
+    // Force user to re-authenticate
+    showErrorMessage('Session expired. Please log in again.')
+    await authService.logout()
+    navigateTo('/login')
   }
 }

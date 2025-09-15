@@ -136,10 +136,10 @@ async function loadBackendVersions(config) {
   };
   
   const services = [
-    { id: 'platform-version', name: 'Platform', url: config.platformBaseUrl || '', healthPath: '/health', fallbackVersion: realVersions['platform-version'] },
-    { id: 'inventory-version', name: 'Inventory', url: config.inventoryBaseUrl, healthPath: '/health', fallbackVersion: realVersions['inventory-version'] },
-    { id: 'recommendations-version', name: 'Recommendations', url: config.recommendationsBaseUrl, healthPath: '/health', fallbackVersion: realVersions['recommendations-version'] },
-    { id: 'checkout-version', name: 'Checkout', url: config.checkoutBaseUrl, healthPath: '/health', fallbackVersion: realVersions['checkout-version'] }
+    { id: 'platform-version', name: 'Platform', url: config.platformBaseUrl || '', healthPath: '/health' },
+    { id: 'inventory-version', name: 'Inventory', url: config.inventoryBaseUrl, healthPath: '/health' },
+    { id: 'recommendations-version', name: 'Recommendations', url: config.recommendationsBaseUrl, healthPath: '/health' },
+    { id: 'checkout-version', name: 'Checkout', url: config.checkoutBaseUrl, healthPath: '/health' }
   ];
   
   for (const service of services) {
@@ -186,13 +186,14 @@ async function loadBackendVersions(config) {
         document.getElementById(service.id).textContent = `❌ HTTP ${response.status}`;
       }
     } catch (error) {
-      // DEMO PURPOSE: Show hardcoded version when service is unreachable to maintain demo functionality
+      // FAIL FAST: Show clear error states without fallback versions
+      console.error(`❌ SERVICE ERROR: ${service.name} health check failed:`, error);
       if (error.name === 'AbortError') {
-        document.getElementById(service.id).textContent = `${service.fallbackVersion} (Timeout)`;
+        document.getElementById(service.id).textContent = `❌ TIMEOUT (2s)`;
       } else if (error.message.includes('fetch')) {
-        document.getElementById(service.id).textContent = `${service.fallbackVersion} (Offline)`;
+        document.getElementById(service.id).textContent = `❌ CONNECTION FAILED`;
       } else {
-        document.getElementById(service.id).textContent = `${service.fallbackVersion} (Error)`;
+        document.getElementById(service.id).textContent = `❌ ERROR: ${error.message}`;
       }
     }
   }

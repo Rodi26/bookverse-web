@@ -67,7 +67,10 @@ class AuthService {
         this._notifyAuthCallbacks(true)
       }
     } catch (error) {
-      console.error('Error loading user from storage:', error)
+      console.error('❌ AUTHENTICATION ERROR: Failed to load user from storage:', error)
+      // Clear potentially corrupted auth state
+      localStorage.removeItem('oidc.user:' + this.config.authority + ':' + this.config.client_id)
+      throw new Error(`Authentication initialization failed: ${error.message}`)
     }
 
     this.initialized = true

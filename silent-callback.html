@@ -14,7 +14,11 @@
                 // Debug: Silent authentication successful
             })
             .catch((error) => {
-                console.error('Silent authentication failed:', error)
+                console.error('❌ AUTHENTICATION ERROR: Silent authentication failed:', error)
+                // Notify parent window of failure
+                if (window.parent) {
+                    window.parent.postMessage({ type: 'auth-silent-error', error: error.message }, '*')
+                }
             })
     </script>
 </body>
