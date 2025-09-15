@@ -321,32 +321,11 @@ release_version() {
     echo "📋 Using provided RELEASE_INCLUDED_REPO_KEYS"
     payload=$(printf '{"promotion_type":"move","included_repository_keys":%s}' "${RELEASE_INCLUDED_REPO_KEYS}")
   else
-    echo "📋 Inferring repositories from service configuration"
-    # Derive service name from application key: bookverse-<service>
-    local service_name
-    service_name="${APPLICATION_KEY#${PROJECT_KEY}-}"
-    echo "🔍 Derived service_name: '$service_name'"
-    
-    # Service-specific repository logic for PROD release
-    local repo_docker repo_generic repo_tech_specific
-    if [[ "$service_name" == "web" ]]; then
-      # Web service uses Docker, generic, and npm repositories  
-      # Note: Using nonprod repositories for PROD release as prod-local repos don't exist
-      echo "🌐 Configuring web service repositories for PROD"
-      repo_docker="${PROJECT_KEY}-${service_name}-internal-docker-nonprod-local"
-      repo_generic="${PROJECT_KEY}-${service_name}-internal-generic-nonprod-local"
-      repo_tech_specific="${PROJECT_KEY}-${service_name}-internal-npm-nonprod-local"
-      echo "📦 Web repos (using nonprod for PROD): $repo_docker, $repo_generic, $repo_tech_specific"
-      payload=$(printf '{"promotion_type":"move","included_repository_keys":["%s","%s","%s"]}' "$repo_docker" "$repo_generic" "$repo_tech_specific")
-    else
-      # Backend services use Docker and Python repositories
-      # Note: Using nonprod repositories for PROD release as prod-local repos don't exist  
-      echo "🐍 Configuring backend service repositories for PROD"
-      repo_docker="${PROJECT_KEY}-${service_name}-internal-docker-nonprod-local"
-      repo_python="${PROJECT_KEY}-${service_name}-internal-python-nonprod-local"
-      echo "📦 Backend repos (using nonprod for PROD): $repo_docker, $repo_python"
-      payload=$(printf '{"promotion_type":"move","included_repository_keys":["%s","%s"]}' "$repo_docker" "$repo_python")
-    fi
+    echo "📋 Using default PROD repositories (no included_repository_keys)"
+    echo "🎯 PROD release: Letting AppTrust use default repository assignment"
+    echo "📝 Note: Explicit repository specification not supported for PROD environment"
+    # For PROD releases, don't specify included_repository_keys - let AppTrust use defaults
+    payload='{"promotion_type":"move"}'
   fi
   echo "📤 Final payload: $payload"
   if apptrust_post \
