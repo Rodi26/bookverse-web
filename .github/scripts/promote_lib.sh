@@ -253,12 +253,16 @@ fetch_summary() {
 apptrust_post() {
   local path="${1:-}"; local data="${2:-}"; local out_file="${3:-}"
   local url="${JFROG_URL}${path}"
+  echo "🔍 DEBUG apptrust_post: path='$path'"
+  echo "🔍 DEBUG apptrust_post: data='$data'"
+  echo "🔍 DEBUG apptrust_post: url='$url'"
   local code
   code=$(curl -sS -L -X POST -o "$out_file" -w "%{http_code}" \
     -H "Authorization: Bearer ${APPTRUST_ACCESS_TOKEN}" \
     -H "Content-Type: application/json" \
     -H "Accept: application/json" \
     -d "$data" "$url" || echo 000)
+  echo "🔍 DEBUG apptrust_post: HTTP code='$code'"
   if [[ "$code" -ge 200 && "$code" -lt 300 ]]; then
     return 0
   else
@@ -350,7 +354,8 @@ release_version() {
     echo "HTTP OK"; cat "$resp_body" || true; echo
   else
     echo "❌ Release to ${FINAL_STAGE} failed" >&2
-    print_request_info "POST" "${JFROG_URL}/apptrust/api/v1/applications/${APPLICATION_KEY}/versions/${APP_VERSION}/release?async=false" "{\"promotion_type\":\"move\"}"
+    print_request_info "POST" "${JFROG_URL}/apptrust/api/v1/applications/${APPLICATION_KEY}/versions/${APP_VERSION}/release?async=false" "$payload"
+    cat "$resp_body" || true; echo
     rm -f "$resp_body"
     return 1
   fi
