@@ -330,19 +330,21 @@ release_version() {
     # Service-specific repository logic for PROD release
     local repo_docker repo_generic repo_tech_specific
     if [[ "$service_name" == "web" ]]; then
-      # Web service uses Docker, generic, and npm repositories
-      echo "🌐 Configuring web service repositories"
-      repo_docker="${PROJECT_KEY}-${service_name}-internal-docker-prod-local"
-      repo_generic="${PROJECT_KEY}-${service_name}-internal-generic-prod-local"
-      repo_tech_specific="${PROJECT_KEY}-${service_name}-internal-npm-prod-local"
-      echo "📦 Web repos: $repo_docker, $repo_generic, $repo_tech_specific"
+      # Web service uses Docker, generic, and npm repositories  
+      # Note: Using nonprod repositories for PROD release as prod-local repos don't exist
+      echo "🌐 Configuring web service repositories for PROD"
+      repo_docker="${PROJECT_KEY}-${service_name}-internal-docker-nonprod-local"
+      repo_generic="${PROJECT_KEY}-${service_name}-internal-generic-nonprod-local"
+      repo_tech_specific="${PROJECT_KEY}-${service_name}-internal-npm-nonprod-local"
+      echo "📦 Web repos (using nonprod for PROD): $repo_docker, $repo_generic, $repo_tech_specific"
       payload=$(printf '{"promotion_type":"move","included_repository_keys":["%s","%s","%s"]}' "$repo_docker" "$repo_generic" "$repo_tech_specific")
     else
       # Backend services use Docker and Python repositories
-      echo "🐍 Configuring backend service repositories"
-      repo_docker="${PROJECT_KEY}-${service_name}-internal-docker-prod-local"
-      repo_python="${PROJECT_KEY}-${service_name}-internal-python-prod-local"
-      echo "📦 Backend repos: $repo_docker, $repo_python"
+      # Note: Using nonprod repositories for PROD release as prod-local repos don't exist  
+      echo "🐍 Configuring backend service repositories for PROD"
+      repo_docker="${PROJECT_KEY}-${service_name}-internal-docker-nonprod-local"
+      repo_python="${PROJECT_KEY}-${service_name}-internal-python-nonprod-local"
+      echo "📦 Backend repos (using nonprod for PROD): $repo_docker, $repo_python"
       payload=$(printf '{"promotion_type":"move","included_repository_keys":["%s","%s"]}' "$repo_docker" "$repo_python")
     fi
   fi
