@@ -315,11 +315,21 @@ release_version() {
     # Derive service name from application key: bookverse-<service>
     local service_name
     service_name="${APPLICATION_KEY#${PROJECT_KEY}-}"
-    local repo_docker repo_python
-    # Use exact internal release repositories for final PROD release
-    repo_docker="${PROJECT_KEY}-${service_name}-internal-docker-release-local"
-    repo_python="${PROJECT_KEY}-${service_name}-internal-python-release-local"
-    payload=$(printf '{"promotion_type":"move","included_repository_keys":["%s","%s"]}' "$repo_docker" "$repo_python")
+    
+    # Service-specific repository logic for PROD release
+    local repo_docker repo_generic repo_tech_specific
+    if [[ "$service_name" == "web" ]]; then
+      # Web service uses Docker, generic, and npm repositories
+      repo_docker="${PROJECT_KEY}-${service_name}-internal-docker-prod-local"
+      repo_generic="${PROJECT_KEY}-${service_name}-internal-generic-prod-local"
+      repo_tech_specific="${PROJECT_KEY}-${service_name}-internal-npm-prod-local"
+      payload=$(printf '{"promotion_type":"move","included_repository_keys":["%s","%s","%s"]}' "$repo_docker" "$repo_generic" "$repo_tech_specific")
+    else
+      # Backend services use Docker and Python repositories
+      repo_docker="${PROJECT_KEY}-${service_name}-internal-docker-prod-local"
+      repo_python="${PROJECT_KEY}-${service_name}-internal-python-prod-local"
+      payload=$(printf '{"promotion_type":"move","included_repository_keys":["%s","%s"]}' "$repo_docker" "$repo_python")
+    fi
   fi
   if apptrust_post \
     "/apptrust/api/v1/applications/${APPLICATION_KEY}/versions/${APP_VERSION}/release?async=false" \
