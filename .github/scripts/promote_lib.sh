@@ -309,28 +309,40 @@ release_version() {
   echo "🚀 Releasing to ${FINAL_STAGE} via AppTrust Release API"
   # Build included repositories list if provided or infer from APPLICATION_KEY and PROJECT_KEY
   local payload
+  echo "🔍 RELEASE_INCLUDED_REPO_KEYS value: '${RELEASE_INCLUDED_REPO_KEYS:-}'"
+  echo "🔍 APPLICATION_KEY: '${APPLICATION_KEY:-}'"
+  echo "🔍 PROJECT_KEY: '${PROJECT_KEY:-}'"
+  
   if [[ -n "${RELEASE_INCLUDED_REPO_KEYS:-}" ]]; then
+    echo "📋 Using provided RELEASE_INCLUDED_REPO_KEYS"
     payload=$(printf '{"promotion_type":"move","included_repository_keys":%s}' "${RELEASE_INCLUDED_REPO_KEYS}")
   else
+    echo "📋 Inferring repositories from service configuration"
     # Derive service name from application key: bookverse-<service>
     local service_name
     service_name="${APPLICATION_KEY#${PROJECT_KEY}-}"
+    echo "🔍 Derived service_name: '$service_name'"
     
     # Service-specific repository logic for PROD release
     local repo_docker repo_generic repo_tech_specific
     if [[ "$service_name" == "web" ]]; then
       # Web service uses Docker, generic, and npm repositories
+      echo "🌐 Configuring web service repositories"
       repo_docker="${PROJECT_KEY}-${service_name}-internal-docker-prod-local"
       repo_generic="${PROJECT_KEY}-${service_name}-internal-generic-prod-local"
       repo_tech_specific="${PROJECT_KEY}-${service_name}-internal-npm-prod-local"
+      echo "📦 Web repos: $repo_docker, $repo_generic, $repo_tech_specific"
       payload=$(printf '{"promotion_type":"move","included_repository_keys":["%s","%s","%s"]}' "$repo_docker" "$repo_generic" "$repo_tech_specific")
     else
       # Backend services use Docker and Python repositories
+      echo "🐍 Configuring backend service repositories"
       repo_docker="${PROJECT_KEY}-${service_name}-internal-docker-prod-local"
       repo_python="${PROJECT_KEY}-${service_name}-internal-python-prod-local"
+      echo "📦 Backend repos: $repo_docker, $repo_python"
       payload=$(printf '{"promotion_type":"move","included_repository_keys":["%s","%s"]}' "$repo_docker" "$repo_python")
     fi
   fi
+  echo "📤 Final payload: $payload"
   if apptrust_post \
     "/apptrust/api/v1/applications/${APPLICATION_KEY}/versions/${APP_VERSION}/release?async=false" \
     "$payload" \
