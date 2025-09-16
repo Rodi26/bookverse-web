@@ -273,6 +273,21 @@ jobs:
           echo "DOCKER_BUILD_PUSH_STATUS=SUCCESS" >> $GITHUB_ENV
           echo "✅ Built and pushed Docker image (OIDC docker push + build-info)"
 
+      - name: "[Evidence] Docker Package"
+        run: |
+          # Source the evidence library
+          source bookverse-infra/libraries/bookverse-devops/scripts/evidence-lib.sh
+          
+          # Set package-specific environment variables
+          export PACKAGE_NAME="web:$IMAGE_TAG"
+          export PACKAGE_VERSION="$IMAGE_TAG"
+          
+          # Attach Docker package evidence
+          # Evidence: PyTest Results (unit test coverage) + SAST Scan (static security analysis)
+          attach_docker_package_evidence "$PACKAGE_NAME" "$PACKAGE_VERSION"
+          
+          echo "✅ Web Docker image package evidence attached: pytest-results, sast-scan"
+
       - name: "[Build Info] Publish"
         id: publish-build-info
         run: |
@@ -335,6 +350,19 @@ jobs:
             echo "❌ Failed to publish build info" >&2
             exit 1
           fi
+
+      - name: "[Evidence] Build Evidence"
+        run: |
+          # Source the evidence library
+          source bookverse-infra/libraries/bookverse-devops/scripts/evidence-lib.sh
+          
+          # Build evidence uses auto-detected environment variables
+          
+          # Attach build evidence
+          # Evidence: FOSSA License Scan (dependency license compliance) + SonarQube Quality Gate (code quality analysis)
+          attach_build_evidence
+          
+          echo "✅ Build evidence attached: fossa-license-scan, sonar-quality-gate"
 
   create-promote:
     name: "Create Application Version & Promote (Conditional)"
@@ -509,6 +537,19 @@ jobs:
             fi
           fi
           rm -f "$RESP_BODY"
+
+      - name: "[Evidence] Application Version (UNASSIGNED)"
+        run: |
+          # Source the evidence library
+          source bookverse-infra/libraries/bookverse-devops/scripts/evidence-lib.sh
+          
+          # Application evidence uses auto-detected environment variables
+          
+          # Attach application evidence for UNASSIGNED stage
+          # Evidence: SLSA Provenance (supply chain security) + Jira Release (release tracking and approval)
+          attach_application_unassigned_evidence
+          
+          echo "✅ Application version evidence attached: slsa-provenance, jira-release"
 
       - name: "[Auto-Promote] Through Stages"
         env:

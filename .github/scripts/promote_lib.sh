@@ -293,6 +293,11 @@ promote_to_stage() {
   rm -f "$resp_body"
   PROMOTED_STAGES="${PROMOTED_STAGES:-}${PROMOTED_STAGES:+ }${target_stage_display}"
   echo "PROMOTED_STAGES=${PROMOTED_STAGES}" >> "$GITHUB_ENV"
+  
+  # Attach evidence for the promoted stage
+  echo "📝 Attaching evidence for stage: $target_stage_display"
+  attach_evidence_for "$target_stage_display"
+  
   fetch_summary
 }
 
@@ -413,9 +418,9 @@ attach_evidence_for() {
   local stage_name="${1:-}"
   case "$stage_name" in
     UNASSIGNED)
-      echo "ℹ️ No evidence for UNASSIGNED" ;;
+      echo "ℹ️ UNASSIGNED evidence handled in separate workflow step" ;;
     DEV)
-      echo "ℹ️ No evidence configured for DEV in demo" ;;
+      attach_evidence_dev ;;
     QA)
       attach_evidence_qa ;;
     STAGING)
@@ -425,6 +430,17 @@ attach_evidence_for() {
     *)
       echo "ℹ️ No evidence rule for stage '$stage_name'" ;;
   esac
+}
+
+attach_evidence_dev() {
+  local now_ts
+  now_ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  # Source the evidence library for DEV stage evidence
+  source bookverse-infra/libraries/bookverse-devops/scripts/evidence-lib.sh
+  
+  # Evidence: Smoke Tests (basic health checks in DEV environment)
+  attach_application_dev_evidence
+  echo "✅ DEV stage evidence attached: smoke-tests"
 }
 
 
