@@ -115,11 +115,6 @@ jobs:
           disable-job-summary: true
           disable-auto-build-publish: true
           disable-auto-evidence-collection: false
-          oidc-provider-name: bookverse-web-github
-          oidc-audience: ${{ vars.JFROG_URL }}
-          disable-job-summary: true
-          disable-auto-build-publish: true
-          disable-auto-evidence-collection: false
         env:
           JF_URL: ${{ vars.JFROG_URL }}
           JF_PROJECT: ${{ vars.PROJECT_KEY }}
