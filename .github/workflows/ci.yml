@@ -224,13 +224,12 @@ jobs:
           echo "📦 Creating web-assets.tar.gz package from dist/ folder"
           
           # Create tar.gz package (following recommendations service pattern)
-          cd dist
-          tar -czf "web-assets-$WEB_ASSETS_VERSION.tar.gz" .
-          cd ..
+          # Create tar outside dist directory to avoid "file changed as we read it" error
+          tar -czf "web-assets-$WEB_ASSETS_VERSION.tar.gz" -C dist .
           
           # Upload packaged artifact to generic repository
           GENERIC_REPO="${{ vars.PROJECT_KEY }}-$SERVICE_NAME-internal-generic-nonprod-local"
-          jf rt upload "dist/web-assets-$WEB_ASSETS_VERSION.tar.gz" "$GENERIC_REPO/$SERVICE_NAME/assets/$WEB_ASSETS_VERSION/web-assets-$WEB_ASSETS_VERSION.tar.gz" \
+          jf rt upload "web-assets-$WEB_ASSETS_VERSION.tar.gz" "$GENERIC_REPO/$SERVICE_NAME/assets/$WEB_ASSETS_VERSION/web-assets-$WEB_ASSETS_VERSION.tar.gz" \
             --build-name "$BUILD_NAME" --build-number "$BUILD_NUMBER" --project "${{ vars.PROJECT_KEY }}"
           echo "✅ Web assets package uploaded with version $WEB_ASSETS_VERSION"
 
