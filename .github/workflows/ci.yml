@@ -160,14 +160,9 @@ jobs:
             --verbose)
           
           # Extract APP_VERSION and package versions from the Python script's JSON output
-          echo "🔍 DEBUG: Full semver output with web,web-assets:"
-          echo "$SEMVER_OUTPUT"
           JSON_LINE=$(echo "$SEMVER_OUTPUT" | grep '{"application_key"')
-          echo "🔍 DEBUG: JSON LINE:"
-          echo "$JSON_LINE"
           APP_VERSION=$(echo "$JSON_LINE" | jq -r '.app_version')
           WEB_ASSETS_VERSION=$(echo "$JSON_LINE" | jq -r '.package_tags."web-assets" // empty')
-          echo "🔍 DEBUG: APP=$APP_VERSION, WEB_ASSETS=$WEB_ASSETS_VERSION"
           
           if [[ -z "$APP_VERSION" || "$APP_VERSION" == "null" ]]; then
             echo "❌ Failed to extract APP_VERSION from semver output" >&2
