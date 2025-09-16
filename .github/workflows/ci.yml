@@ -162,7 +162,7 @@ jobs:
           # Extract APP_VERSION and package versions from the Python script's JSON output
           JSON_LINE=$(echo "$SEMVER_OUTPUT" | grep '{"application_key"')
           APP_VERSION=$(echo "$JSON_LINE" | jq -r '.app_version')
-          WEB_ASSETS_VERSION=$(echo "$JSON_LINE" | jq -r '.package_tags."web-assets.tar.gz" // empty')
+          WEB_ASSETS_VERSION=$(echo "$JSON_LINE" | jq -r '.package_tags."web-assets" // empty')
           
           if [[ -z "$APP_VERSION" || "$APP_VERSION" == "null" ]]; then
             echo "❌ Failed to extract APP_VERSION from semver output" >&2
@@ -175,7 +175,7 @@ jobs:
           
           echo "WEB_ASSETS_VERSION=$WEB_ASSETS_VERSION" >> $GITHUB_ENV
           echo "📦 Package versions determined:"
-          echo "  🌐 web-assets.tar.gz (Generic): $WEB_ASSETS_VERSION"
+          echo "  🌐 web-assets (Generic): $WEB_ASSETS_VERSION"
           echo "  🏷️ Application: $APP_VERSION"
           echo "  🔢 Build Number (for build info): $BUILD_NUMBER"
           
