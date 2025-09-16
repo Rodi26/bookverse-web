@@ -159,12 +159,25 @@ jobs:
             --packages "$SERVICE_NAME" \
             --verbose)
           
-          # Extract APP_VERSION from the Python script's JSON output
-          APP_VERSION=$(echo "$SEMVER_OUTPUT" | grep '{"application_key"' | jq -r '.app_version')
+          # Extract APP_VERSION and package versions from the Python script's JSON output
+          JSON_LINE=$(echo "$SEMVER_OUTPUT" | grep '{"application_key"')
+          APP_VERSION=$(echo "$JSON_LINE" | jq -r '.app_version')
+          WEB_ASSETS_VERSION=$(echo "$JSON_LINE" | jq -r '.package_tags."web-assets.tar.gz" // empty')
+          
           if [[ -z "$APP_VERSION" || "$APP_VERSION" == "null" ]]; then
             echo "❌ Failed to extract APP_VERSION from semver output" >&2
             exit 1
           fi
+          if [[ -z "$WEB_ASSETS_VERSION" ]]; then
+            echo "❌ Failed to determine WEB_ASSETS_VERSION from semver script" >&2
+            exit 1
+          fi
+          
+          echo "WEB_ASSETS_VERSION=$WEB_ASSETS_VERSION" >> $GITHUB_ENV
+          echo "📦 Package versions determined:"
+          echo "  🌐 web-assets.tar.gz (Generic): $WEB_ASSETS_VERSION"
+          echo "  🏷️ Application: $APP_VERSION"
+          echo "  🔢 Build Number (for build info): $BUILD_NUMBER"
           
           # Set IMAGE_TAG to the Docker package tag
           DOCKER_TAG_VAR="DOCKER_TAG_$(echo "$SERVICE_NAME" | tr '[:lower:]' '[:upper:]' | tr '-' '_')"
@@ -198,6 +211,43 @@ jobs:
       - name: "[Build] Build web assets"
         run: |
           npm run build --if-present
+
+      - name: "[Build] Generic Artifact - Web Assets"
+        run: |
+          set -euo pipefail
+          SERVICE_NAME=${SERVICE_NAME:-$(echo ${{ github.event.repository.name }} | sed 's/bookverse-//')}
+          
+          # Use web-assets package version from semver determination step
+          echo "Using web-assets package version: $WEB_ASSETS_VERSION"
+          
+          # Create web assets package from dist/ folder
+          echo "📦 Creating web-assets.tar.gz package from dist/ folder"
+          
+          # Create tar.gz package (following recommendations service pattern)
+          cd dist
+          tar -czf "web-assets-$WEB_ASSETS_VERSION.tar.gz" .
+          cd ..
+          
+          # Upload packaged artifact to generic repository
+          GENERIC_REPO="${{ vars.PROJECT_KEY }}-$SERVICE_NAME-internal-generic-nonprod-local"
+          jf rt upload "dist/web-assets-$WEB_ASSETS_VERSION.tar.gz" "$GENERIC_REPO/$SERVICE_NAME/assets/$WEB_ASSETS_VERSION/web-assets-$WEB_ASSETS_VERSION.tar.gz" \
+            --build-name "$BUILD_NAME" --build-number "$BUILD_NUMBER" --project "${{ vars.PROJECT_KEY }}"
+          echo "✅ Web assets package uploaded with version $WEB_ASSETS_VERSION"
+
+      - name: "[Evidence] Web Assets Package"
+        run: |
+          # Source the evidence library
+          source bookverse-infra/libraries/bookverse-devops/scripts/evidence-lib.sh
+          
+          # Set package-specific environment variables  
+          export PACKAGE_NAME="web-assets-$WEB_ASSETS_VERSION.tar.gz"
+          export PACKAGE_VERSION="$WEB_ASSETS_VERSION"
+          
+          # Attach generic package evidence
+          # Evidence: Config Bundle Verification (static assets validation and integrity)
+          attach_generic_package_evidence "$PACKAGE_NAME" "$PACKAGE_VERSION"
+          
+          echo "✅ Web assets package evidence attached: config-bundle"
 
       - name: "[Build] Docker image"
         run: |
