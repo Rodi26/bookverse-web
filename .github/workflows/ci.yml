@@ -250,7 +250,7 @@ jobs:
           
           echo "✅ Web assets package evidence attached: config-bundle"
 
-      - name: "[Build] Docker image"
+      - name: "[Build] Web image"
         run: |
           set -euo pipefail
           # Use JFrog CLI to authenticate pushes without requiring docker login
@@ -274,7 +274,7 @@ jobs:
           echo "DOCKER_BUILD_PUSH_STATUS=SUCCESS" >> $GITHUB_ENV
           echo "✅ Built and pushed Docker image (OIDC docker push + build-info)"
 
-      - name: "[Evidence] Docker Package"
+      - name: "[Evidence] Web Image Package Evidence"
         env:
           EVIDENCE_PRIVATE_KEY: ${{ secrets.EVIDENCE_PRIVATE_KEY }}
         run: |
@@ -448,41 +448,22 @@ jobs:
           pip install --user PyYAML
           echo "✅ Python dependencies installed"
 
-      - name: "[Setup] Determine SemVer"
-        id: determine-semver
+      - name: "[Setup] Use App Version from Build Job"
+        id: use-app-version
         run: |
-          SERVICE_NAME=${SERVICE_NAME:-$(echo ${{ github.event.repository.name }} | sed 's/bookverse-//')}
-          APPLICATION_KEY="bookverse-$SERVICE_NAME"
+          # Use the app version that was already determined in the build-test-publish job
+          # No need to re-run semver determination - use the version from the published build
+          APP_VERSION="${{ needs.build-test-publish.outputs.app_version }}"
           
-          # Use the persisted JF_OIDC_TOKEN from the auth step
-          if [[ -z "${JF_OIDC_TOKEN:-}" ]]; then
-            echo "❌ Missing JF_OIDC_TOKEN. Ensure OIDC exchange step succeeded." >&2
+          if [[ -z "$APP_VERSION" ]]; then
+            echo "❌ Missing app_version from build-test-publish job output" >&2
             exit 1
           fi
           
-          echo "✅ Using persisted JFrog access token for semver determination"
-          
-          # Use the shared semver determination script from bookverse-devops
-          chmod +x bookverse-infra/libraries/bookverse-devops/scripts/determine-semver.sh
-          SEMVER_OUTPUT=$(bookverse-infra/libraries/bookverse-devops/scripts/determine-semver.sh \
-            --application-key "$APPLICATION_KEY" \
-            --version-map "./config/version-map.yaml" \
-            --jfrog-url "${{ vars.JFROG_URL }}" \
-            --jfrog-token "$JF_OIDC_TOKEN" \
-            --project-key "${{ vars.PROJECT_KEY }}" \
-            --packages "web,web-assets" \
-            --verbose)
-          
-          # Extract APP_VERSION from the Python script's JSON output
-          APP_VERSION=$(echo "$SEMVER_OUTPUT" | grep '{"application_key"' | jq -r '.app_version')
-          if [[ -z "$APP_VERSION" || "$APP_VERSION" == "null" ]]; then
-            echo "❌ Failed to extract APP_VERSION from semver output" >&2
-            exit 1
-          fi
-          
+          echo "🏷️ Using Application Version from build job: $APP_VERSION"
+          echo "📋 This version is already associated with the published build info"
           echo "APP_VERSION=$APP_VERSION" >> $GITHUB_ENV
           echo "app_version=$APP_VERSION" >> $GITHUB_OUTPUT
-          echo "✅ Determined APP_VERSION: $APP_VERSION"
 
       - name: "[Create] Application Version"
         run: |
@@ -552,7 +533,7 @@ jobs:
           fi
           rm -f "$RESP_BODY"
 
-      - name: "[Evidence] Application Version (UNASSIGNED)"
+      - name: "[Evidence] Application Version Evidence"
         env:
           EVIDENCE_PRIVATE_KEY: ${{ secrets.EVIDENCE_PRIVATE_KEY }}
         run: |
