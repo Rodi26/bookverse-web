@@ -379,6 +379,43 @@ jobs:
           echo "ATTACH_TO_BUILD: $ATTACH_TO_BUILD"
           echo "ATTACH_TO_PACKAGE: $ATTACH_TO_PACKAGE"
 
+      - name: "[Debug] Build Evidence JFrog Command"
+        env:
+          EVIDENCE_PRIVATE_KEY: ${{ secrets.EVIDENCE_PRIVATE_KEY }}
+        run: |
+          echo "🔍 Debugging jf evd create-evidence command for build:"
+          echo "BUILD_NAME: $BUILD_NAME"
+          echo "BUILD_NUMBER: $BUILD_NUMBER"
+          echo "PROJECT_KEY: ${{ vars.PROJECT_KEY }}"
+          echo "EVIDENCE_PRIVATE_KEY: ${EVIDENCE_PRIVATE_KEY:+SET}"
+          
+          # Create a test predicate file 
+          echo '{"test": "build evidence debug"}' > test-predicate.json
+          
+          # Show the exact command that would be executed
+          echo "📋 JFrog CLI command that will be executed:"
+          echo "jf evd create-evidence \\"
+          echo "  --predicate test-predicate.json \\"
+          echo "  --predicate-type https://test.example.com \\"
+          echo "  --build-name $BUILD_NAME \\"
+          echo "  --build-number $BUILD_NUMBER \\"
+          echo "  --project ${{ vars.PROJECT_KEY }} \\"
+          echo "  --provider-id github-actions \\"
+          echo "  --key ***"
+          
+          # Try the actual command but with a test predicate
+          set +e  # Don't exit on error
+          jf evd create-evidence \
+            --predicate test-predicate.json \
+            --predicate-type "https://test.example.com" \
+            --build-name "$BUILD_NAME" \
+            --build-number "$BUILD_NUMBER" \
+            --project "${{ vars.PROJECT_KEY }}" \
+            --provider-id github-actions \
+            --key "${EVIDENCE_PRIVATE_KEY}"
+          echo "Exit code: $?"
+          set -e
+
       - name: "[Evidence] Build Evidence"
         env:
           EVIDENCE_PRIVATE_KEY: ${{ secrets.EVIDENCE_PRIVATE_KEY }}
