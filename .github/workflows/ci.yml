@@ -283,7 +283,7 @@ jobs:
           
           # Set package-specific environment variables
           export PACKAGE_NAME="web"
-          export PACKAGE_VERSION="$DOCKER_TAG_WEB"
+          export PACKAGE_VERSION="$IMAGE_TAG"
           
           # Attach Docker package evidence
           # Evidence: PyTest Results (unit test coverage) + SAST Scan (static security analysis)
