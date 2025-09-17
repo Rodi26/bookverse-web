@@ -234,6 +234,8 @@ jobs:
           echo "✅ Web assets package uploaded with version $WEB_ASSETS_VERSION"
 
       - name: "[Evidence] Web Assets Package"
+        env:
+          EVIDENCE_PRIVATE_KEY: ${{ secrets.EVIDENCE_PRIVATE_KEY }}
         run: |
           # Source the evidence library
           source bookverse-infra/libraries/bookverse-devops/scripts/evidence-lib.sh
@@ -273,6 +275,8 @@ jobs:
           echo "✅ Built and pushed Docker image (OIDC docker push + build-info)"
 
       - name: "[Evidence] Docker Package"
+        env:
+          EVIDENCE_PRIVATE_KEY: ${{ secrets.EVIDENCE_PRIVATE_KEY }}
         run: |
           # Source the evidence library
           source bookverse-infra/libraries/bookverse-devops/scripts/evidence-lib.sh
@@ -351,6 +355,8 @@ jobs:
           fi
 
       - name: "[Evidence] Build Evidence"
+        env:
+          EVIDENCE_PRIVATE_KEY: ${{ secrets.EVIDENCE_PRIVATE_KEY }}
         run: |
           # Source the evidence library
           source bookverse-infra/libraries/bookverse-devops/scripts/evidence-lib.sh
@@ -545,6 +551,8 @@ jobs:
           rm -f "$RESP_BODY"
 
       - name: "[Evidence] Application Version (UNASSIGNED)"
+        env:
+          EVIDENCE_PRIVATE_KEY: ${{ secrets.EVIDENCE_PRIVATE_KEY }}
         run: |
           # Source the evidence library
           source bookverse-infra/libraries/bookverse-devops/scripts/evidence-lib.sh
