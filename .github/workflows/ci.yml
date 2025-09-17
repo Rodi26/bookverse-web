@@ -405,6 +405,7 @@ jobs:
           
           # Try the actual command but with a test predicate
           set +e  # Don't exit on error
+          echo "🧪 Testing with server-id parameter:"
           jf evd create-evidence \
             --predicate test-predicate.json \
             --predicate-type "https://test.example.com" \
@@ -412,8 +413,21 @@ jobs:
             --build-number "$BUILD_NUMBER" \
             --project "${{ vars.PROJECT_KEY }}" \
             --provider-id github-actions \
+            --server-id setup-jfrog-cli-server \
             --key "${EVIDENCE_PRIVATE_KEY}"
-          echo "Exit code: $?"
+          echo "Exit code with server-id: $?"
+          
+          echo "🧪 Testing with url parameter:"
+          jf evd create-evidence \
+            --predicate test-predicate.json \
+            --predicate-type "https://test.example.com" \
+            --build-name "$BUILD_NAME" \
+            --build-number "$BUILD_NUMBER" \
+            --project "${{ vars.PROJECT_KEY }}" \
+            --provider-id github-actions \
+            --url "https://apptrustswampupc.jfrog.io/" \
+            --key "${EVIDENCE_PRIVATE_KEY}"
+          echo "Exit code with url: $?"
           set -e
 
       - name: "[Evidence] Build Evidence"
