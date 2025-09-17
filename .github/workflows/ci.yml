@@ -434,6 +434,12 @@ jobs:
         env:
           EVIDENCE_PRIVATE_KEY: ${{ secrets.EVIDENCE_PRIVATE_KEY }}
         run: |
+          # Configure JFrog CLI with project context (same as Docker build step)
+          SERVER_ID="${SETUP_JFROG_CLI_SERVER_IDS:-setup-jfrog-cli-server}"
+          jf c use "$SERVER_ID" || true
+          export JF_PROJECT="${{ vars.PROJECT_KEY }}"
+          export JFROG_CLI_BUILD_PROJECT="${{ vars.PROJECT_KEY }}"
+          
           # Source the evidence library
           source bookverse-infra/libraries/bookverse-devops/scripts/evidence-lib.sh
           
