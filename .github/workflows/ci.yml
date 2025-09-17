@@ -354,6 +354,31 @@ jobs:
             exit 1
           fi
 
+      - name: "[Debug] Build Evidence Configuration"
+        run: |
+          echo "🔍 Debugging build evidence configuration:"
+          echo "BUILD_NAME: $BUILD_NAME"
+          echo "BUILD_NUMBER: $BUILD_NUMBER"
+          echo "PROJECT_KEY: ${{ vars.PROJECT_KEY }}"
+          echo "SERVICE_NAME: $SERVICE_NAME"
+          echo "ATTACH_TO_BUILD: ${ATTACH_TO_BUILD:-not_set}"
+          echo "ATTACH_TO_PACKAGE: ${ATTACH_TO_PACKAGE:-not_set}"
+          
+          # Source the evidence library to see what it detects
+          source bookverse-infra/libraries/bookverse-devops/scripts/evidence-lib.sh
+          
+          echo "📋 After loading evidence library:"
+          echo "BUILD_NAME: $BUILD_NAME"
+          echo "BUILD_NUMBER: $BUILD_NUMBER"
+          echo "PROJECT_KEY: $PROJECT_KEY"
+          
+          # Check what the evd_create function would do
+          echo "🎯 Testing evd_create logic:"
+          export ATTACH_TO_BUILD="true"
+          export ATTACH_TO_PACKAGE="false"
+          echo "ATTACH_TO_BUILD: $ATTACH_TO_BUILD"
+          echo "ATTACH_TO_PACKAGE: $ATTACH_TO_PACKAGE"
+
       - name: "[Evidence] Build Evidence"
         env:
           EVIDENCE_PRIVATE_KEY: ${{ secrets.EVIDENCE_PRIVATE_KEY }}
