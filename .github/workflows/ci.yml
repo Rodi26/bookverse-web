@@ -354,91 +354,11 @@ jobs:
             exit 1
           fi
 
-      - name: "[Debug] Build Evidence Configuration"
-        run: |
-          echo "🔍 Debugging build evidence configuration:"
-          echo "BUILD_NAME: $BUILD_NAME"
-          echo "BUILD_NUMBER: $BUILD_NUMBER"
-          echo "PROJECT_KEY: ${{ vars.PROJECT_KEY }}"
-          echo "SERVICE_NAME: $SERVICE_NAME"
-          echo "ATTACH_TO_BUILD: ${ATTACH_TO_BUILD:-not_set}"
-          echo "ATTACH_TO_PACKAGE: ${ATTACH_TO_PACKAGE:-not_set}"
-          
-          # Source the evidence library to see what it detects
-          source bookverse-infra/libraries/bookverse-devops/scripts/evidence-lib.sh
-          
-          echo "📋 After loading evidence library:"
-          echo "BUILD_NAME: $BUILD_NAME"
-          echo "BUILD_NUMBER: $BUILD_NUMBER"
-          echo "PROJECT_KEY: $PROJECT_KEY"
-          
-          # Check what the evd_create function would do
-          echo "🎯 Testing evd_create logic:"
-          export ATTACH_TO_BUILD="true"
-          export ATTACH_TO_PACKAGE="false"
-          echo "ATTACH_TO_BUILD: $ATTACH_TO_BUILD"
-          echo "ATTACH_TO_PACKAGE: $ATTACH_TO_PACKAGE"
-
-      - name: "[Debug] Build Evidence JFrog Command"
-        env:
-          EVIDENCE_PRIVATE_KEY: ${{ secrets.EVIDENCE_PRIVATE_KEY }}
-        run: |
-          echo "🔍 Debugging jf evd create-evidence command for build:"
-          echo "BUILD_NAME: $BUILD_NAME"
-          echo "BUILD_NUMBER: $BUILD_NUMBER"
-          echo "PROJECT_KEY: ${{ vars.PROJECT_KEY }}"
-          echo "EVIDENCE_PRIVATE_KEY: ${EVIDENCE_PRIVATE_KEY:+SET}"
-          
-          # Create a test predicate file 
-          echo '{"test": "build evidence debug"}' > test-predicate.json
-          
-          # Show the exact command that would be executed
-          echo "📋 JFrog CLI command that will be executed:"
-          echo "jf evd create-evidence \\"
-          echo "  --predicate test-predicate.json \\"
-          echo "  --predicate-type https://test.example.com \\"
-          echo "  --build-name $BUILD_NAME \\"
-          echo "  --build-number $BUILD_NUMBER \\"
-          echo "  --project ${{ vars.PROJECT_KEY }} \\"
-          echo "  --provider-id github-actions \\"
-          echo "  --key ***"
-          
-          # Try the actual command but with a test predicate
-          set +e  # Don't exit on error
-          echo "🧪 Testing with server-id parameter:"
-          jf evd create-evidence \
-            --predicate test-predicate.json \
-            --predicate-type "https://test.example.com" \
-            --build-name "$BUILD_NAME" \
-            --build-number "$BUILD_NUMBER" \
-            --project "${{ vars.PROJECT_KEY }}" \
-            --provider-id github-actions \
-            --server-id setup-jfrog-cli-server \
-            --key "${EVIDENCE_PRIVATE_KEY}"
-          echo "Exit code with server-id: $?"
-          
-          echo "🧪 Testing with url parameter:"
-          jf evd create-evidence \
-            --predicate test-predicate.json \
-            --predicate-type "https://test.example.com" \
-            --build-name "$BUILD_NAME" \
-            --build-number "$BUILD_NUMBER" \
-            --project "${{ vars.PROJECT_KEY }}" \
-            --provider-id github-actions \
-            --url "https://apptrustswampupc.jfrog.io/" \
-            --key "${EVIDENCE_PRIVATE_KEY}"
-          echo "Exit code with url: $?"
-          set -e
-
       - name: "[Evidence] Build Evidence"
         env:
           EVIDENCE_PRIVATE_KEY: ${{ secrets.EVIDENCE_PRIVATE_KEY }}
         run: |
-          # Configure JFrog CLI with project context (same as Docker build step)
-          SERVER_ID="${SETUP_JFROG_CLI_SERVER_IDS:-setup-jfrog-cli-server}"
-          jf c use "$SERVER_ID" || true
-          export JF_PROJECT="${{ vars.PROJECT_KEY }}"
-          export JFROG_CLI_BUILD_PROJECT="${{ vars.PROJECT_KEY }}"
+          echo "🏗️ Generating evidence for build-info"
           
           # Source the evidence library
           source bookverse-infra/libraries/bookverse-devops/scripts/evidence-lib.sh
