@@ -39,6 +39,13 @@ jobs:
       - name: "[Setup] Checkout"
         uses: actions/checkout@v4
 
+      - name: "[Setup] Checkout bookverse-infra for evidence library"
+        uses: actions/checkout@v4
+        with:
+          repository: 'yonatanp-jfrog/bookverse-infra'
+          ref: 'main'
+          path: 'bookverse-infra'
+
       - name: "[Setup] Prereqs (jq)"
         run: |
           sudo apt-get update -y
@@ -46,7 +53,7 @@ jobs:
 
       - name: "[Setup] JFrog CLI"
         # Temporary workaround: using forked action until upstream fix
-        # uses: jfrog/setup-jfrog-cli@v4
+        # uses: EyalDelarea/setup-jfrog-cli@swampUpAppTrust
         uses: EyalDelarea/setup-jfrog-cli@swampUpAppTrust
         env:
           JF_URL: ${{ vars.JFROG_URL }}
@@ -152,7 +159,8 @@ jobs:
           export JFROG_URL="${{ vars.JFROG_URL }}"
           export PROJECT_KEY="${{ vars.PROJECT_KEY }}"
           # JF_OIDC_TOKEN is already set from OIDC exchange step above
-          source .github/scripts/promote_lib.sh
+          source bookverse-infra/libraries/bookverse-devops/scripts/evidence-lib.sh
+          setup_promotion_environment
           fetch_summary
           echo "CURRENT_STAGE_BEFORE=${CURRENT_STAGE:-UNASSIGNED}" >> $GITHUB_ENV
           echo "RELEASE_STATUS_BEFORE=${RELEASE_STATUS:-UNKNOWN}" >> $GITHUB_ENV
@@ -197,7 +205,8 @@ jobs:
           export JFROG_URL='${{ vars.JFROG_URL }}'
           export PROJECT_KEY='${{ vars.PROJECT_KEY }}'
           # JF_OIDC_TOKEN already set by OIDC exchange
-          source .github/scripts/promote_lib.sh
+          source bookverse-infra/libraries/bookverse-devops/scripts/evidence-lib.sh
+          setup_promotion_environment
           fetch_summary
           ALLOW_RELEASE=false
           advance_one_step
@@ -210,7 +219,8 @@ jobs:
           export JFROG_URL='${{ vars.JFROG_URL }}'
           export PROJECT_KEY='${{ vars.PROJECT_KEY }}'
           # JF_OIDC_TOKEN already set by OIDC exchange
-          source .github/scripts/promote_lib.sh
+          source bookverse-infra/libraries/bookverse-devops/scripts/evidence-lib.sh
+          setup_promotion_environment
           for i in 1 2 3 4; do
             fetch_summary
             PREV=$(display_stage_for "${CURRENT_STAGE:-UNASSIGNED}")
@@ -239,7 +249,8 @@ jobs:
           export JFROG_URL="${{ vars.JFROG_URL }}"
           export PROJECT_KEY="${{ vars.PROJECT_KEY }}"
           # JF_OIDC_TOKEN already set by OIDC exchange
-          source .github/scripts/promote_lib.sh
+          source bookverse-infra/libraries/bookverse-devops/scripts/evidence-lib.sh
+          setup_promotion_environment
           fetch_summary
           if [[ "$(display_stage_for "${CURRENT_STAGE:-}")" == "STAGING" ]]; then
             ALLOW_RELEASE=true
