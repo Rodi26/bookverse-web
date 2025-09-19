@@ -409,6 +409,7 @@ jobs:
       STAGES_STR: "DEV QA STAGING PROD"
       FINAL_STAGE: "PROD"
       ALLOW_RELEASE: "true"
+      RELEASE_INCLUDED_REPO_KEYS: '["bookverse-web-internal-docker-release-local","bookverse-web-internal-generic-release-local"]'
 
     steps:
       - name: "[Setup] Checkout"
