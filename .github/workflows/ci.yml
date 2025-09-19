@@ -271,7 +271,7 @@ jobs:
           
           source bookverse-infra/libraries/bookverse-devops/scripts/evidence-lib.sh
           
-          export PACKAGE_NAME="web-assets"
+          export PACKAGE_NAME="web-assets-$WEB_ASSETS_VERSION.tar.gz"
           export PACKAGE_VERSION="$WEB_ASSETS_VERSION"
           attach_generic_package_evidence "$PACKAGE_NAME" "$PACKAGE_VERSION"
           
