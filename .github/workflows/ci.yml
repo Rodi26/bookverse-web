@@ -1,7 +1,9 @@
 name: CI
 
-# DEMO-READY: Automatic triggers enabled for full CI/CD pipeline demonstration
-# PRODUCTION NOTE: Real systems would have additional branch protection and approval gates
+concurrency:
+  group: ci-${{ vars.PROJECT_KEY }}-${{ github.repository }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [main]
@@ -52,7 +54,6 @@ jobs:
           echo "🌐 Frontend note: Web services create application versions for UI releases"
           echo ""
           
-          # Use shared analyze-commit script from bookverse-infra
           chmod +x bookverse-infra/libraries/bookverse-devops/scripts/analyze-commit.sh
           bookverse-infra/libraries/bookverse-devops/scripts/analyze-commit.sh
 
@@ -130,7 +131,6 @@ jobs:
         id: exchange-oidc
         run: |
           echo "🔐 Using bookverse-devops shared OIDC exchange script for web service"
-          # Use shared script to eliminate ~40 lines of duplicate OIDC logic
           bookverse-infra/libraries/bookverse-devops/scripts/exchange-oidc-token.sh \
             --service-name "web" \
             --provider-name "bookverse-web-github" \
@@ -139,6 +139,11 @@ jobs:
             --verbose
           echo "✅ OIDC token exchange completed using shared bookverse-devops script"
 
+      - name: "[Setup] Install Python dependencies"
+        run: |
+          pip install --user PyYAML setuptools wheel
+          echo "✅ Python dependencies installed"
+
       - name: "[Setup] Determine SemVer"
         id: set-app-version
         run: |
@@ -146,9 +151,28 @@ jobs:
           SERVICE_NAME=${SERVICE_NAME:-$(echo ${{ github.event.repository.name }} | sed 's/bookverse-//')}
           APPLICATION_KEY="bookverse-$SERVICE_NAME"
           
-          # Use the shared semver determination script from bookverse-devops
-          chmod +x bookverse-infra/libraries/bookverse-devops/scripts/determine-semver.sh
-          SEMVER_OUTPUT=$(bookverse-infra/libraries/bookverse-devops/scripts/determine-semver.sh \
+          # Validate OIDC token availability
+          if [[ -z "${JF_OIDC_TOKEN:-}" ]]; then
+            echo "❌ Missing JF_OIDC_TOKEN. Ensure OIDC exchange step succeeded." >&2
+            exit 1
+          fi
+          echo "✅ Using persisted JFrog access token for semver determination"
+          echo "📋 Using shared semver logic from bookverse-infra"
+          
+          # Validate and prepare script files
+          INFRA_SCRIPTS_PATH="bookverse-infra/libraries/bookverse-devops/scripts"
+          if [[ -f "$INFRA_SCRIPTS_PATH/determine-semver.sh" ]]; then
+            cp "$INFRA_SCRIPTS_PATH/determine-semver.sh" .
+            cp "$INFRA_SCRIPTS_PATH/semver_versioning.py" .
+            chmod +x determine-semver.sh
+            echo "✅ Using shared semver scripts from bookverse-infra"
+          else
+            echo "❌ Shared semver scripts not found in bookverse-infra at $INFRA_SCRIPTS_PATH" >&2
+            exit 1
+          fi
+          
+          echo "🔍 Calculating versions for all packages using shared logic..."
+          SEMVER_OUTPUT=$(./determine-semver.sh \
             --application-key "$APPLICATION_KEY" \
             --version-map "./config/version-map.yaml" \
             --jfrog-url "${{ vars.JFROG_URL }}" \
@@ -157,35 +181,45 @@ jobs:
             --packages "web,web-assets" \
             --verbose)
           
-          # Extract APP_VERSION and package versions from the Python script's JSON output
           JSON_LINE=$(echo "$SEMVER_OUTPUT" | grep '{"application_key"')
           APP_VERSION=$(echo "$JSON_LINE" | jq -r '.app_version')
-          WEB_ASSETS_VERSION=$(echo "$JSON_LINE" | jq -r '.package_tags."web-assets" // empty')
-          
           if [[ -z "$APP_VERSION" || "$APP_VERSION" == "null" ]]; then
             echo "❌ Failed to extract APP_VERSION from semver output" >&2
+            echo "📋 Semver output: $SEMVER_OUTPUT" >&2
             exit 1
           fi
-          if [[ -z "$WEB_ASSETS_VERSION" ]]; then
-            echo "❌ Failed to determine WEB_ASSETS_VERSION from semver script" >&2
-            exit 1
-          fi
+          echo "📋 Extracting individual package versions from JSON output:"
           
+          WEB_VERSION=$(echo "$JSON_LINE" | jq -r '.package_tags.web // empty')
+          WEB_ASSETS_VERSION=$(echo "$JSON_LINE" | jq -r '.package_tags."web-assets" // empty')
+          
+          # Comprehensive package validation
+          for pkg_name in "WEB" "WEB_ASSETS"; do
+            pkg_var="${pkg_name}_VERSION"
+            if [[ -z "${!pkg_var}" ]]; then
+              echo "❌ Failed to determine ${pkg_var} from semver script" >&2
+              echo "📋 Available package_tags: $(echo "$JSON_LINE" | jq -r '.package_tags | keys[]')" >&2
+              exit 1
+            fi
+          done
+          
+          echo "WEB_VERSION=$WEB_VERSION" >> $GITHUB_ENV
           echo "WEB_ASSETS_VERSION=$WEB_ASSETS_VERSION" >> $GITHUB_ENV
-          echo "📦 Package versions determined:"
+          
+          echo "🏷️ Package Versions:"
+          echo "  🐳 web (Docker): $WEB_VERSION"
           echo "  🌐 web-assets (Generic): $WEB_ASSETS_VERSION"
           echo "  🏷️ Application: $APP_VERSION"
           echo "  🔢 Build Number (for build info): $BUILD_NUMBER"
           
-          # Set IMAGE_TAG to the Docker package tag
+          # Docker tag logic with override capability
           DOCKER_TAG_VAR="DOCKER_TAG_$(echo "$SERVICE_NAME" | tr '[:lower:]' '[:upper:]' | tr '-' '_')"
           if [[ -n "${!DOCKER_TAG_VAR:-}" ]]; then
             IMAGE_TAG="${!DOCKER_TAG_VAR}"
           else
-            IMAGE_TAG="$BUILD_NUMBER"
+            IMAGE_TAG="$WEB_VERSION"
           fi
           
-          # Update IMAGE_NAME with the determined tag
           REGISTRY_URL="${{ vars.DOCKER_REGISTRY }}"
           REPO_KEY="${{ vars.PROJECT_KEY }}-$SERVICE_NAME-internal-docker-nonprod-local"
           IMAGE_NAME="$REGISTRY_URL/$REPO_KEY/$SERVICE_NAME:$IMAGE_TAG"
@@ -215,17 +249,12 @@ jobs:
           set -euo pipefail
           SERVICE_NAME=${SERVICE_NAME:-$(echo ${{ github.event.repository.name }} | sed 's/bookverse-//')}
           
-          # Use web-assets package version from semver determination step
           echo "Using web-assets package version: $WEB_ASSETS_VERSION"
           
-          # Create web assets package from dist/ folder
           echo "📦 Creating web-assets.tar.gz package from dist/ folder"
           
-          # Create tar.gz package (following recommendations service pattern)
-          # Create tar outside dist directory to avoid "file changed as we read it" error
           tar -czf "web-assets-$WEB_ASSETS_VERSION.tar.gz" -C dist .
           
-          # Upload packaged artifact to generic repository
           GENERIC_REPO="${{ vars.PROJECT_KEY }}-$SERVICE_NAME-internal-generic-nonprod-local"
           jf rt upload "web-assets-$WEB_ASSETS_VERSION.tar.gz" "$GENERIC_REPO/$SERVICE_NAME/assets/$WEB_ASSETS_VERSION/web-assets-$WEB_ASSETS_VERSION.tar.gz" \
             --build-name "$BUILD_NAME" --build-number "$BUILD_NUMBER" --project "${{ vars.PROJECT_KEY }}"
@@ -236,89 +265,35 @@ jobs:
           EVIDENCE_PRIVATE_KEY: ${{ secrets.EVIDENCE_PRIVATE_KEY }}
           EVIDENCE_KEY_ALIAS: ${{ vars.EVIDENCE_KEY_ALIAS }}
         run: |
-          # Set package-specific environment variables  
-          export PACKAGE_NAME="web-assets-$WEB_ASSETS_VERSION.tar.gz"
+          echo "📦 Generating evidence for web assets package using shared library"
+          echo "📦 Target Package: web-assets:$WEB_ASSETS_VERSION"
+          echo "🔐 Evidence will be cryptographically signed for compliance verification"
+          
+          source bookverse-infra/libraries/bookverse-devops/scripts/evidence-lib.sh
+          
+          export PACKAGE_NAME="web-assets"
           export PACKAGE_VERSION="$WEB_ASSETS_VERSION"
+          attach_generic_package_evidence "$PACKAGE_NAME" "$PACKAGE_VERSION"
           
-          # Create config bundle evidence predicate
-          cat > config-bundle.json << EOF
-{
-  "@type": "https://in-toto.io/Statement/v0.1",
-  "predicateType": "https://in-toto.io/Statement/v0.1",
-  "subject": [{"name": "$PACKAGE_NAME", "digest": {"sha256": "$PACKAGE_VERSION"}}],
-  "predicate": {
-    "bundle_type": "web_assets",
-    "file_count": 12,
-    "validation_status": "passed",
-    "checksum_verified": true
-  }
-}
-EOF
-
-          # Create evidence using direct JFrog CLI (will show same package verification issue)
-          echo "✅ Creating web assets evidence with direct GitHub variable syntax..."
-          jf evd create-evidence \
-            --predicate config-bundle.json \
-            --predicate-type "https://in-toto.io/Statement/v0.1" \
-            --package-name "$PACKAGE_NAME" \
-            --package-version "$PACKAGE_VERSION" \
-            --package-repo-name "bookverse-web-internal-generic-nonprod-local" \
-            --project "${{ vars.PROJECT_KEY }}" \
-            --provider-id github-actions \
-            --key "${{ secrets.EVIDENCE_PRIVATE_KEY }}" \
-            --key-alias "${{ vars.EVIDENCE_KEY_ALIAS }}" || echo "⚠️ Web assets evidence creation failed"
-          
-          echo "✅ Web assets package evidence attached: config-bundle"
+          echo "✅ Web assets package evidence attached via shared library: config-bundle"
 
       - name: "[Build] Web image"
         run: |
           set -euo pipefail
-          # Use JFrog CLI to authenticate pushes without requiring docker login
           SERVER_ID="${SETUP_JFROG_CLI_SERVER_IDS:-setup-jfrog-cli-server}"
           jf c use "$SERVER_ID" || true
-          # Ensure project header is sent for OIDC-based commands like `jf docker`
           export JF_PROJECT="${{ vars.PROJECT_KEY }}"
-          # Also set build project explicitly for JFrog CLI commands
           export JFROG_CLI_BUILD_PROJECT="${{ vars.PROJECT_KEY }}"
 
-          # Using OIDC-based server configuration from setup action; no admin token required
-          # Use precomputed IMAGE_TAG/IMAGE_NAME from set-app-version step to avoid drift
           echo "Using precomputed image tag: $IMAGE_TAG"
           echo "Using precomputed image name: $IMAGE_NAME"
 
-          # Build and push (plain docker) using subdomain host; then create build-info
           jf docker build --pull -t "$IMAGE_NAME" --build-name "$BUILD_NAME" --build-number "$BUILD_NUMBER" .
           docker push "$IMAGE_NAME"
-
-          # Build-info will be published in a later step via bag/bce/bp
-          echo "DOCKER_BUILD_PUSH_STATUS=SUCCESS" >> $GITHUB_ENV
-          echo "✅ Built and pushed Docker image (OIDC docker push + build-info)"
-
-      - name: "[Evidence] Web Image Package Evidence"
-        env:
-          EVIDENCE_PRIVATE_KEY: ${{ secrets.EVIDENCE_PRIVATE_KEY }}
-          EVIDENCE_KEY_ALIAS: ${{ vars.EVIDENCE_KEY_ALIAS }}
-        run: |
-          # Source the evidence library
-          source bookverse-infra/libraries/bookverse-devops/scripts/evidence-lib.sh
           
-          # Set package-specific environment variables
-          export PACKAGE_NAME="web"
-          export PACKAGE_VERSION="$IMAGE_TAG"
+          echo "📋 Resolving image digest and associating with build-info..."
           
-          # Attach Docker package evidence
-          # Evidence: PyTest Results (unit test coverage) + SAST Scan (static security analysis)
-          attach_docker_package_evidence "$PACKAGE_NAME" "$PACKAGE_VERSION"
-          
-          echo "✅ Web Docker image package evidence attached: pytest-results, sast-scan"
-
-      - name: "[Build Info] Publish"
-        id: publish-build-info
-        run: |
-          # Associate the pushed Docker image with the build-info before publishing
           REPO_KEY="${{ vars.PROJECT_KEY }}-$SERVICE_NAME-internal-docker-nonprod-local"
-          echo "🔗 Adding docker image to build-info: image=$IMAGE_NAME repo=$REPO_KEY"
-          # Resolve pushed image digest and write in required format: image:tag@sha256:...
           DIGEST=$(docker inspect "$IMAGE_NAME" --format='{{index .RepoDigests 0}}' 2>/dev/null | awk -F@ '{print $2}')
           if [[ -z "$DIGEST" || "$DIGEST" == "<no value>" ]]; then
             docker pull "$IMAGE_NAME" >/dev/null 2>&1 || true
@@ -327,27 +302,48 @@ EOF
           if [[ -z "$DIGEST" || "$DIGEST" == "<no value>" ]]; then
             echo "❌ Could not resolve image digest for $IMAGE_NAME" >&2; exit 1
           fi
+          
           echo "${IMAGE_NAME%@*}@${DIGEST}" > images.txt
+          echo "📋 Associating web image: $(cat images.txt)"
           jf rt build-docker-create "$REPO_KEY" \
             --image-file images.txt \
             --build-name "$BUILD_NAME" \
             --build-number "$BUILD_NUMBER" \
             --project "${{ vars.PROJECT_KEY }}"
+
+          echo "DOCKER_BUILD_PUSH_STATUS=SUCCESS" >> $GITHUB_ENV
+          echo "✅ Built, pushed, and associated web Docker image with build-info"
+
+      - name: "[Evidence] Web Image Package Evidence"
+        env:
+          EVIDENCE_PRIVATE_KEY: ${{ secrets.EVIDENCE_PRIVATE_KEY }}
+          EVIDENCE_KEY_ALIAS: ${{ vars.EVIDENCE_KEY_ALIAS }}
+        run: |
+          echo "🛡️ Generating evidence for web image package using shared library"
+          echo "📦 Target Package: web:$WEB_VERSION"
+          echo "🔐 Evidence will be cryptographically signed for compliance verification"
           
+          source bookverse-infra/libraries/bookverse-devops/scripts/evidence-lib.sh
+          
+          export PACKAGE_NAME="web"
+          export PACKAGE_VERSION="$WEB_VERSION"
+          attach_docker_package_evidence "$PACKAGE_NAME" "$PACKAGE_VERSION"
+          
+          echo "✅ Web image package evidence attached via shared library: pytest-results, sast-scan"
+
+      - name: "[Build Info] Publish"
+        id: publish-build-info
+        run: |
           jf rt bag --project "${{ vars.PROJECT_KEY }}" "$BUILD_NAME" "$BUILD_NUMBER"
           jf rt bce --project "${{ vars.PROJECT_KEY }}" "$BUILD_NAME" "$BUILD_NUMBER"
           if BUILD_PUBLISH_RESULT=$(jf rt bp --project "${{ vars.PROJECT_KEY }}" "$BUILD_NAME" "$BUILD_NUMBER"); then
             echo "BUILD_INFO_PUBLISH_STATUS=SUCCESS" >> $GITHUB_ENV
             
-            # Extract timestamp from build publish result (optimized - no extra API call)
-            # Parse the UI URL from JFrog CLI log output instead of non-existent JSON field
             BUILD_UI_URL=$(echo "$BUILD_PUBLISH_RESULT" | grep -o 'https://[^[:space:]]*builds/[^[:space:]]*' | head -1 || echo "")
             if [[ -n "$BUILD_UI_URL" ]]; then
-              # Extract epoch milliseconds from UI URL: .../builds/NAME/NUMBER/TIMESTAMP/published
               EPOCH_MS=$(echo "$BUILD_UI_URL" | sed -n 's|.*/builds/[^/]*/[^/]*/\([0-9]*\)/published.*|\1|p')
               
               if [[ -n "$EPOCH_MS" && "$EPOCH_MS" =~ ^[0-9]+$ ]]; then
-                # Convert to JFrog's exact timestamp format: YYYY-MM-DDTHH:MM:SS.mmm+0000
                 EPOCH_SEC=$((EPOCH_MS / 1000))
                 MILLISECS=$((EPOCH_MS % 1000))
                 BUILD_STARTED_TIMESTAMP=$(date -u -r "$EPOCH_SEC" "+%Y-%m-%dT%H:%M:%S" 2>/dev/null || date -u -d "@$EPOCH_SEC" "+%Y-%m-%dT%H:%M:%S")
@@ -382,13 +378,8 @@ EOF
         run: |
           echo "🏗️ Generating evidence for build-info"
           
-          # Source the evidence library
           source bookverse-infra/libraries/bookverse-devops/scripts/evidence-lib.sh
           
-          # Build evidence uses auto-detected environment variables
-          
-          # Attach build evidence
-          # Evidence: FOSSA License Scan (dependency license compliance) + SonarQube Quality Gate (code quality analysis)
           attach_build_evidence
           
           echo "✅ Build evidence attached: fossa-license-scan, sonar-quality-gate"
@@ -443,20 +434,10 @@ EOF
           JFROG_CLI_BUILD_NUMBER: ${{ env.BUILD_NUMBER }}
           JFROG_CLI_BUILD_PROJECT: ${{ vars.PROJECT_KEY }}
 
-      - name: "[Info] Promotion Information"
-        run: |
-          echo "🚀 CI Pipeline: Promote Phase"
-          echo "📋 Commit Analysis Result: ${{ needs.analyze-commit.outputs.commit_type }}"
-          echo "💡 Decision: ${{ needs.analyze-commit.outputs.decision_reason }}"
-          echo "🎯 Creating AppTrust Application Version"
-          echo "👤 Triggered by: ${{ github.actor }}"
-          echo "🕐 Timestamp: $(date -u)"
-
       - name: "[Auth] OIDC Token Exchange (bookverse-devops shared script)"
         id: exchange-oidc
         run: |
           echo "🔐 Using bookverse-devops shared OIDC exchange script for web service promotion"
-          # Use shared script to eliminate ~25 lines of duplicate OIDC logic
           bookverse-infra/libraries/bookverse-devops/scripts/exchange-oidc-token.sh \
             --service-name "web" \
             --provider-name "bookverse-web-github" \
@@ -465,16 +446,9 @@ EOF
             --verbose
           echo "✅ OIDC token exchange completed using shared bookverse-devops script"
 
-      - name: "[Setup] Install Python dependencies"
-        run: |
-          pip install --user PyYAML
-          echo "✅ Python dependencies installed"
-
       - name: "[Setup] Use App Version from Build Job"
         id: use-app-version
         run: |
-          # Use the app version that was already determined in the build-test-publish job
-          # No need to re-run semver determination - use the version from the published build
           APP_VERSION="${{ needs.build-test-publish.outputs.app_version }}"
           
           if [[ -z "$APP_VERSION" ]]; then
@@ -487,49 +461,49 @@ EOF
           echo "APP_VERSION=$APP_VERSION" >> $GITHUB_ENV
           echo "app_version=$APP_VERSION" >> $GITHUB_OUTPUT
 
+      - name: "[Diag] Build Info contents"
+        run: |
+          set -euo pipefail
+          echo "🔎 Fetching build info to confirm artifacts are present"
+          ENC_BUILD_NAME=$(printf '%s' "$BUILD_NAME" | jq -sRr @uri)
+          ENC_BUILD_NUMBER=$(printf '%s' "$BUILD_NUMBER" | jq -sRr @uri)
+          URL="${{ vars.JFROG_URL }}/artifactory/api/build/${ENC_BUILD_NAME}/${ENC_BUILD_NUMBER}?project=${{ vars.PROJECT_KEY }}"
+          echo "GET $URL"
+          curl -sS -H "Authorization: Bearer ${{ steps.exchange-oidc.outputs.token }}" -H "X-JFrog-Project: ${{ vars.PROJECT_KEY }}" -H "Accept: application/json" "$URL" \
+            | jq '.buildInfo.modules // [] | map({id, artifacts: (.artifacts // [] | length)})'
+
       - name: "[Create] Application Version"
         run: |
-          echo "🚀 Creating application version ${{ env.APP_VERSION }}"
+          echo "🚀 Creating AppTrust application version: ${{ env.APP_VERSION }}"
+          echo "📦 Binding artifacts from build-info: ${{ needs.build-test-publish.outputs.build_name }}/${{ needs.build-test-publish.outputs.build_number }}"
+          echo "🔗 This creates an immutable link between application version and all published artifacts"
           
-          # Create application version using AppTrust API payload structure
-          # Adapted from working inventory service pattern for web service
+          if [[ -z "${JF_OIDC_TOKEN:-}" ]]; then
+            echo "❌ Missing JF_OIDC_TOKEN. Ensure OIDC exchange step succeeded." >&2
+            exit 1
+          fi
+          echo "✅ Using JF_OIDC_TOKEN for AppTrust API authentication"
+          
           BASE="${{ vars.JFROG_URL }}/apptrust/api/v1"
           APP_KEY="$APPLICATION_KEY"
           
-          # Generate demo tag for web UI releases
-          TAG_OPTIONS=(
-            "release"
-            "hotfix" 
-            "feature"
-            "bugfix"
-            "enhancement"
-            "security"
-            "performance"
-            "refactor"
-            "experimental"
-            "maintenance"
-            "integration"
-            "documentation"
-            "stable"
-            "beta"
-          )
+          TAG_OPTIONS=(release hotfix feature bugfix enhancement security performance refactor)
           TAG_INDEX=$((${GITHUB_RUN_NUMBER:-0} % ${#TAG_OPTIONS[@]}))
           APP_TAG="${TAG_OPTIONS[$TAG_INDEX]}"
           
-          # Use the build name from the build-test-publish job where build info was published
           ACTUAL_BUILD_NAME="${{ needs.build-test-publish.outputs.build_name }}"
           
-          # Create payload using string concatenation (adapted from inventory service)
-          APP_VERSION_PAYLOAD='{"version":"'$APP_VERSION'","tag":"'$APP_TAG'","sources":{"builds":[{"name":"'$ACTUAL_BUILD_NAME'","number":"'$BUILD_NUMBER'","repository_key":"'${{ vars.PROJECT_KEY }}'-build-info","include_dependencies":false}]}}'
+          ACTUAL_BUILD_NUMBER="${{ needs.build-test-publish.outputs.build_number }}"
+          echo "🔧 Using actual build number from first job: $ACTUAL_BUILD_NUMBER"
+          APP_VERSION_PAYLOAD='{"version":"'$APP_VERSION'","tag":"'$APP_TAG'","sources":{"builds":[{"name":"'$ACTUAL_BUILD_NAME'","number":"'$ACTUAL_BUILD_NUMBER'","repository_key":"'${{ vars.PROJECT_KEY }}'-build-info","include_dependencies":false}]}}'
           
           echo "📋 Creating application version with payload:"
           echo "$APP_VERSION_PAYLOAD" | jq . || echo "$APP_VERSION_PAYLOAD"
           
-          # Call AppTrust API using approach adapted from inventory service
           RESP_BODY=$(mktemp)
           HTTP_STATUS=$(curl -sS -L -o "$RESP_BODY" -w "%{http_code}" -X POST \
             "$BASE/applications/$APP_KEY/versions?async=false" \
-            -H "Authorization: Bearer ${{ steps.exchange-oidc.outputs.token }}" \
+            -H "Authorization: Bearer $JF_OIDC_TOKEN" \
             -H "Content-Type: application/json" \
             -H "X-JFrog-Project: ${{ vars.PROJECT_KEY }}" \
             -d "$APP_VERSION_PAYLOAD" \
@@ -544,7 +518,6 @@ EOF
             echo "✅ Created application version $APP_VERSION"
           else
             echo "⚠️ Application version creation returned HTTP $HTTP_STATUS"
-            # For demo purposes, continue even if version already exists
             if [[ "$HTTP_STATUS" == "409" ]]; then
               echo "📝 Version $APP_VERSION already exists, continuing with promotion..."
             else
@@ -554,19 +527,36 @@ EOF
             fi
           fi
           rm -f "$RESP_BODY"
+          
+          echo "🔍 Validating application version creation..."
+          CONTENT_FILE=$(mktemp)
+          CONTENT_STATUS=$(curl -sS -L -o "$CONTENT_FILE" -w "%{http_code}" \
+            "$BASE/applications/$APP_KEY/versions/$APP_VERSION/content" \
+            -H "Authorization: Bearer $JF_OIDC_TOKEN" \
+            -H "Accept: application/json")
+          
+          if [[ "$CONTENT_STATUS" != "200" ]]; then
+            echo "❌ Version content endpoint returned HTTP $CONTENT_STATUS for $APP_KEY@$APP_VERSION" >&2
+            echo "📨 Response Body:"; cat "$CONTENT_FILE" || true; echo
+            rm -f "$CONTENT_FILE"
+            exit 1
+          fi
+          VERSION_STATE=$(jq -r '.status // empty' "$CONTENT_FILE" 2>/dev/null || echo "")
+          echo "📨 Version Content:"; cat "$CONTENT_FILE" || true; echo
+          rm -f "$CONTENT_FILE"
+          if [[ "$VERSION_STATE" != "COMPLETED" ]]; then
+            echo "❌ Application version not in COMPLETED state (status='$VERSION_STATE') for $APP_KEY@$APP_VERSION" >&2
+            exit 1
+          fi
+          echo "✅ Application version created and validated (COMPLETED): $APP_KEY@$APP_VERSION"
 
       - name: "[Evidence] Application Version Evidence"
         env:
           EVIDENCE_PRIVATE_KEY: ${{ secrets.EVIDENCE_PRIVATE_KEY }}
           EVIDENCE_KEY_ALIAS: ${{ vars.EVIDENCE_KEY_ALIAS }}
         run: |
-          # Source the evidence library
           source bookverse-infra/libraries/bookverse-devops/scripts/evidence-lib.sh
           
-          # Application evidence uses auto-detected environment variables
-          
-          # Attach application evidence for UNASSIGNED stage
-          # Evidence: SLSA Provenance (supply chain security) + Jira Release (release tracking and approval)
           attach_application_unassigned_evidence
           
           echo "✅ Application version evidence attached: slsa-provenance, jira-release"
@@ -575,19 +565,15 @@ EOF
         run: |
           echo "🚀 Promoting to DEV stage and generating evidence"
           
-           # Use the JF_OIDC_TOKEN from the OIDC exchange step
            if [[ -z "${JF_OIDC_TOKEN:-}" ]]; then
              echo "❌ Missing JF_OIDC_TOKEN. Ensure OIDC exchange step succeeded." >&2
              exit 1
            fi
            echo "✅ Using JF_OIDC_TOKEN for DEV promotion"
           
-          # Source evidence library (includes promotion setup)
-          export APPTRUST_ACCESS_TOKEN="$JF_OIDC_TOKEN"
           source bookverse-infra/libraries/bookverse-devops/scripts/evidence-lib.sh
           setup_promotion_environment
           
-          # Promote to DEV
           if advance_one_step; then
             echo "✅ Successfully promoted to DEV"
           else
@@ -595,8 +581,6 @@ EOF
             exit 1
           fi
           
-          # Generate and attach DEV stage evidence
-          # Evidence: Smoke Tests (basic health checks in DEV environment)
           attach_application_dev_evidence
           echo "✅ DEV stage evidence attached: smoke-tests"
 
@@ -604,16 +588,13 @@ EOF
         run: |
           echo "🚀 Promoting to QA stage and generating evidence"
           
-          # Use the persisted JF_OIDC_TOKEN
           if [[ -z "${JF_OIDC_TOKEN:-}" ]]; then
             echo "❌ Missing JF_OIDC_TOKEN. Ensure OIDC exchange step succeeded." >&2
             exit 1
           fi
-          export APPTRUST_ACCESS_TOKEN="$JF_OIDC_TOKEN"
           source bookverse-infra/libraries/bookverse-devops/scripts/evidence-lib.sh
           setup_promotion_environment
           
-          # Promote to QA
           if advance_one_step; then
             echo "✅ Successfully promoted to QA"
           else
@@ -621,8 +602,6 @@ EOF
             exit 1
           fi
           
-          # Generate and attach QA stage evidence
-          # Evidence: DAST Scan (dynamic security testing) + API Tests (integration testing)
           attach_application_qa_evidence
           echo "✅ QA stage evidence attached: dast-scan, api-tests"
 
@@ -630,16 +609,13 @@ EOF
         run: |
           echo "🚀 Promoting to STAGING stage and generating evidence"
           
-          # Use the persisted JF_OIDC_TOKEN
           if [[ -z "${JF_OIDC_TOKEN:-}" ]]; then
             echo "❌ Missing JF_OIDC_TOKEN. Ensure OIDC exchange step succeeded." >&2
             exit 1
           fi
-          export APPTRUST_ACCESS_TOKEN="$JF_OIDC_TOKEN"
           source bookverse-infra/libraries/bookverse-devops/scripts/evidence-lib.sh
           setup_promotion_environment
           
-          # Promote to STAGING
           if advance_one_step; then
             echo "✅ Successfully promoted to STAGING"
           else
@@ -647,8 +623,6 @@ EOF
             exit 1
           fi
           
-          # Generate and attach STAGING stage evidence
-          # Evidence: IaC Scan (infrastructure security) + Pentest (penetration testing) + Change Approval (management approval)
           attach_application_staging_evidence
           echo "✅ STAGING stage evidence attached: iac-scan, pentest, change-approval"
 
@@ -656,16 +630,13 @@ EOF
         run: |
           echo "🚀 Promoting to PROD stage and generating evidence"
           
-          # Use the persisted JF_OIDC_TOKEN
           if [[ -z "${JF_OIDC_TOKEN:-}" ]]; then
             echo "❌ Missing JF_OIDC_TOKEN. Ensure OIDC exchange step succeeded." >&2
             exit 1
           fi
-          export APPTRUST_ACCESS_TOKEN="$JF_OIDC_TOKEN"
           source bookverse-infra/libraries/bookverse-devops/scripts/evidence-lib.sh
           setup_promotion_environment
           
-          # Promote to PROD (release)
           if advance_one_step; then
             echo "✅ Successfully promoted to PROD"
           else
@@ -673,8 +644,6 @@ EOF
             exit 1
           fi
 
-          # Generate and attach PROD stage evidence
-          # Evidence: ArgoCD Deployment Verification (production deployment health and status)
           attach_application_prod_evidence
           echo "✅ PROD stage evidence attached: deployment-verification"
           echo "🎉 SUCCESS: Application version $APP_VERSION promoted to PROD with all evidence attached!"
