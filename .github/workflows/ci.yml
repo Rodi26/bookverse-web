@@ -151,9 +151,14 @@ jobs:
           SERVICE_NAME=${SERVICE_NAME:-$(echo ${{ github.event.repository.name }} | sed 's/bookverse-//')}
           APPLICATION_KEY="bookverse-$SERVICE_NAME"
           
+          # Small delay to ensure environment variables are available
+          sleep 2
+          
           # Validate OIDC token availability
           if [[ -z "${JF_OIDC_TOKEN:-}" ]]; then
             echo "❌ Missing JF_OIDC_TOKEN. Ensure OIDC exchange step succeeded." >&2
+            echo "🔍 DEBUG: Available environment variables:"
+            env | grep -E "(JF_|JFROG_)" || echo "No JF/JFROG variables found"
             exit 1
           fi
           echo "✅ Using persisted JFrog access token for semver determination"
