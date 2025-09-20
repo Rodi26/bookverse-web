@@ -288,7 +288,7 @@ function layout(content, hasMore = false) {
     
     <div class="banner">
       <h1>Discover your next favorite book</h1>
-      <p>From our curated collection of 45 amazing titles</p>
+      <p>From our curated collection of amazing titles</p>
     </div>
     
     <div class="search-container">
