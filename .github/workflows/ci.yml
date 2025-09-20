@@ -161,19 +161,6 @@ jobs:
           
           # Validate and prepare script files
           INFRA_SCRIPTS_PATH="bookverse-infra/libraries/bookverse-devops/scripts"
-          echo "🔍 DEBUG: Checking for scripts at $INFRA_SCRIPTS_PATH"
-          echo "🔍 DEBUG: Current directory: $(pwd)"
-          echo "🔍 DEBUG: Directory contents:"
-          ls -la
-          echo "🔍 DEBUG: bookverse-infra directory contents:"
-          ls -la bookverse-infra/ || echo "bookverse-infra directory not found"
-          echo "🔍 DEBUG: bookverse-infra/libraries contents:"
-          ls -la bookverse-infra/libraries/ || echo "libraries directory not found"
-          echo "🔍 DEBUG: bookverse-infra/libraries/bookverse-devops contents:"
-          ls -la bookverse-infra/libraries/bookverse-devops/ || echo "bookverse-devops directory not found"
-          echo "🔍 DEBUG: bookverse-infra/libraries/bookverse-devops/scripts contents:"
-          ls -la bookverse-infra/libraries/bookverse-devops/scripts/ || echo "scripts directory not found"
-          
           if [[ -f "$INFRA_SCRIPTS_PATH/determine-semver.sh" ]]; then
             cp "$INFRA_SCRIPTS_PATH/determine-semver.sh" .
             cp "$INFRA_SCRIPTS_PATH/semver_versioning.py" .
@@ -181,8 +168,6 @@ jobs:
             echo "✅ Using shared semver scripts from bookverse-infra"
           else
             echo "❌ Shared semver scripts not found in bookverse-infra at $INFRA_SCRIPTS_PATH" >&2
-            echo "🔍 DEBUG: Final check - file exists?"
-            ls -la "$INFRA_SCRIPTS_PATH/determine-semver.sh" || echo "File not found"
             exit 1
           fi
           
