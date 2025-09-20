@@ -475,80 +475,139 @@ jobs:
 
       - name: "[Create] Application Version"
         run: |
-          echo "🚀 Creating AppTrust application version: ${{ env.APP_VERSION }}"
-          echo "📦 Binding artifacts from build-info: ${{ needs.build-test-publish.outputs.build_name }}/${{ needs.build-test-publish.outputs.build_number }}"
-          echo "🔗 This creates an immutable link between application version and all published artifacts"
-          
-          if [[ -z "${JF_OIDC_TOKEN:-}" ]]; then
-            echo "❌ Missing JF_OIDC_TOKEN. Ensure OIDC exchange step succeeded." >&2
-            exit 1
-          fi
-          echo "✅ Using JF_OIDC_TOKEN for AppTrust API authentication"
-          
-          BASE="${{ vars.JFROG_URL }}/apptrust/api/v1"
-          APP_KEY="$APPLICATION_KEY"
-          
-          TAG_OPTIONS=(release hotfix feature bugfix enhancement security performance refactor)
+          echo "🚀 Creating AppTrust application version: $APP_VERSION"
+
+          # Determine application version tag - simulate real development environment
+          # Array of realistic single tags for demo
+          TAG_OPTIONS=(
+            "release"
+            "hotfix"
+            "feature"
+            "bugfix"
+            "enhancement"
+            "security"
+            "performance"
+            "refactor"
+            "experimental"
+            "maintenance"
+            "integration"
+            "documentation"
+            "stable"
+            "beta"
+            "alpha"
+            "critical"
+            "patch"
+            "minor"
+            "major"
+            "cleanup"
+          )
+
+          # Randomly select single tag based on run number for consistency
           TAG_INDEX=$((${GITHUB_RUN_NUMBER:-0} % ${#TAG_OPTIONS[@]}))
           APP_TAG="${TAG_OPTIONS[$TAG_INDEX]}"
-          
-          ACTUAL_BUILD_NAME="${{ needs.build-test-publish.outputs.build_name }}"
-          
-          ACTUAL_BUILD_NUMBER="${{ needs.build-test-publish.outputs.build_number }}"
-          echo "🔧 Using actual build number from first job: $ACTUAL_BUILD_NUMBER"
-          APP_VERSION_PAYLOAD='{"version":"'$APP_VERSION'","tag":"'$APP_TAG'","sources":{"builds":[{"name":"'$ACTUAL_BUILD_NAME'","number":"'$ACTUAL_BUILD_NUMBER'","repository_key":"'${{ vars.PROJECT_KEY }}'-build-info","include_dependencies":false}]}}'
-          
-          echo "📋 Creating application version with payload:"
-          echo "$APP_VERSION_PAYLOAD" | jq . || echo "$APP_VERSION_PAYLOAD"
-          
-          RESP_BODY=$(mktemp)
-          HTTP_STATUS=$(curl -sS -L -o "$RESP_BODY" -w "%{http_code}" -X POST \
-            "$BASE/applications/$APP_KEY/versions?async=false" \
-            -H "Authorization: Bearer $JF_OIDC_TOKEN" \
-            -H "Content-Type: application/json" \
-            -d "$APP_VERSION_PAYLOAD" \
-            --fail-with-body)
-          
-          echo "🔢 HTTP Status: $HTTP_STATUS"
-          echo "📨 Response Body:"
-          cat "$RESP_BODY" | jq . 2>/dev/null || cat "$RESP_BODY"
-          echo ""
-          
-          if [[ "$HTTP_STATUS" -ge 200 && "$HTTP_STATUS" -lt 300 ]]; then
-            echo "✅ Created application version $APP_VERSION"
-          else
-            echo "⚠️ Application version creation returned HTTP $HTTP_STATUS"
-            if [[ "$HTTP_STATUS" == "409" ]]; then
-              echo "📝 Version $APP_VERSION already exists, continuing with promotion..."
-            else
-              echo "❌ Failed to create application version" >&2
-              rm -f "$RESP_BODY"
-              exit 1
+          echo "🏷️ Application Version Tag (demo simulation): $APP_TAG"
+
+          # Create application version with build sources
+          APP_VERSION_PAYLOAD=$(cat << EOF
+          {
+            "version": "$APP_VERSION",
+            "tag": "$APP_TAG",
+            "sources": {
+              "builds": [
+                {
+                  "name": "$BUILD_NAME",
+                  "number": "$BUILD_NUMBER",
+                  "repository_key": "$BUILD_INFO_REPO",
+                  "include_dependencies": true
+                }
+              ]
+            }
+          }
+          EOF
+          )
+
+          # Debug: show sanitized curl and payload
+          echo "📦 Application Key: $APPLICATION_KEY"
+          echo "📝 Payload:"; echo "$APP_VERSION_PAYLOAD" | jq . || echo "$APP_VERSION_PAYLOAD"
+          # Source shared helper if available, with a robust fallback definition
+          if [ -f .github/scripts/http_debug.sh ]; then source .github/scripts/http_debug.sh; fi
+          if ! declare -f print_request_debug >/dev/null 2>&1; then
+            print_request_debug() {
+              local method="$1"; local url="$2"; local body="${3:-}"; local level="${HTTP_DEBUG_LEVEL:-basic}"
+              [ "$level" = "none" ] && return 0
+              local show_project_header=false
+              if [[ "${DEBUG_INCLUDE_PROJECT_HEADER:-}" == "true" || "${DEBUG_INCLUDE_PROJECT_HEADER:-}" == "1" ]]; then
+                show_project_header=true
+              else
+                if [[ "$url" == *"/apptrust/api/"* ]]; then
+                  if [[ "$url" == *"/promote"* || "$url" == *"/release"* ]]; then
+                    show_project_header=false
+                  else
+                    show_project_header=true
+                  fi
+                fi
+              fi
+              local show_content_type=false
+              if [[ "$method" == "POST" ]]; then
+                show_content_type=true
+              fi
+              echo "---- Request debug (${level}) ----"
+              echo "Method: ${method}"
+              echo "URL: ${url}"
+              echo "Headers:"
+              echo "  Authorization: Bearer ***REDACTED***"
+              if $show_project_header && [[ -n "${PROJECT_KEY:-}" ]]; then echo "  X-JFrog-Project: ${PROJECT_KEY}"; fi
+              if $show_content_type; then echo "  Content-Type: application/json"; fi
+              echo "  Accept: application/json"
+              if [ -n "$body" ] && [ "$level" = "verbose" ]; then
+                echo "Body: ${body}"
+              fi
+              echo "-----------------------"
+            }
+          fi
+          echo "🔗 Curl (sanitized): curl -X POST '${{ vars.JFROG_URL }}/apptrust/api/v1/applications/$APPLICATION_KEY/versions/?async=false' -H 'Authorization: Bearer ***' -H 'Content-Type: application/json' -H 'Accept: application/json' -d '<payload>'"
+          DEBUG_INCLUDE_PROJECT_HEADER=false print_request_debug "POST" "${{ vars.JFROG_URL }}/apptrust/api/v1/applications/$APPLICATION_KEY/versions/?async=false" "<payload>"
+
+          # Obtain ephemeral OIDC access token from configured JFrog server and ensure jq is present
+          # Use the default server that the setup action configured; older jf versions don't accept --server-id
+          eval "$(jf c export --show-token)"
+          TOKEN="${JF_ACCESS_TOKEN:-}"
+          if [ -z "$TOKEN" ]; then
+            echo "❌ Unable to export OIDC access token from JFrog CLI configuration"
+            exit 1
+          fi
+          if ! command -v jq >/dev/null 2>&1; then sudo apt-get update -y && sudo apt-get install -y jq >/dev/null; fi
+
+          # Preflight: ensure the application exists; create if 404
+          echo "🔍 Preflight: ensuring application '$APPLICATION_KEY' exists"
+          APP_GET_CODE=$(curl -s -o /dev/null -w '%{http_code}' "${{ vars.JFROG_URL }}/apptrust/api/v1/applications/$APPLICATION_KEY" \
+            -H "Authorization: Bearer $TOKEN" -H "X-JFrog-Project: ${{ vars.PROJECT_KEY }}" -H "Accept: application/json")
+          if [ "$APP_GET_CODE" = "404" ]; then
+            echo "🆕 Application not found; creating it"
+            CREATE_APP_BODY=$(jq -n --arg name "BookVerse Web" --arg key "$APPLICATION_KEY" --arg proj "${{ vars.PROJECT_KEY }}" '{application_name:$name, application_key:$key, project_key:$proj}')
+            APP_CREATE_CODE=$(curl -s -o /tmp/app_create.json -w '%{http_code}' -X POST "${{ vars.JFROG_URL }}/apptrust/api/v1/applications/" \
+              -H "Authorization: Bearer $TOKEN" -H "X-JFrog-Project: ${{ vars.PROJECT_KEY }}" -H "Content-Type: application/json" -H "Accept: application/json" \
+              -d "$CREATE_APP_BODY")
+            echo "📨 Create Application Response:"; cat /tmp/app_create.json || true
+            if [ "$APP_CREATE_CODE" -lt 200 ] || [ "$APP_CREATE_CODE" -ge 300 ]; then
+              echo "❌ Failed to create application (HTTP $APP_CREATE_CODE)"; exit 1
             fi
           fi
-          rm -f "$RESP_BODY"
-          
-          echo "🔍 Validating application version creation..."
-          CONTENT_FILE=$(mktemp)
-          CONTENT_STATUS=$(curl -sS -L -o "$CONTENT_FILE" -w "%{http_code}" \
-            "$BASE/applications/$APP_KEY/versions/$APP_VERSION/content" \
-            -H "Authorization: Bearer $JF_OIDC_TOKEN" \
-            -H "Accept: application/json")
-          
-          if [[ "$CONTENT_STATUS" != "200" ]]; then
-            echo "❌ Version content endpoint returned HTTP $CONTENT_STATUS for $APP_KEY@$APP_VERSION" >&2
-            echo "📨 Response Body:"; cat "$CONTENT_FILE" || true; echo
-            rm -f "$CONTENT_FILE"
-            exit 1
+
+          # Create the application version via platform endpoint (not Artifactory)
+          RESP_FILE=$(mktemp)
+          HTTP_CODE=$(curl -s -o "$RESP_FILE" -w '%{http_code}' -X POST "${{ vars.JFROG_URL }}/apptrust/api/v1/applications/$APPLICATION_KEY/versions/?async=false" \
+            -H "Authorization: Bearer $TOKEN" -H "X-JFrog-Project: ${{ vars.PROJECT_KEY }}" -H "Content-Type: application/json" -H "Accept: application/json" \
+            -d "$APP_VERSION_PAYLOAD")
+          echo "📨 Response Body:"; cat "$RESP_FILE" || true; echo
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            :
+          elif [ "$HTTP_CODE" = "409" ]; then
+            echo "⚠️ Application version already exists; continuing"
+          else
+            echo "❌ Create application version failed (HTTP $HTTP_CODE)"; exit 1
           fi
-          VERSION_STATE=$(jq -r '.status // empty' "$CONTENT_FILE" 2>/dev/null || echo "")
-          echo "📨 Version Content:"; cat "$CONTENT_FILE" || true; echo
-          rm -f "$CONTENT_FILE"
-          if [[ "$VERSION_STATE" != "COMPLETED" ]]; then
-            echo "❌ Application version not in COMPLETED state (status='$VERSION_STATE') for $APP_KEY@$APP_VERSION" >&2
-            exit 1
-          fi
-          echo "✅ Application version created and validated (COMPLETED): $APP_KEY@$APP_VERSION"
+          rm -f "$RESP_FILE"
 
       - name: "[Evidence] Application Version Evidence"
         env:
