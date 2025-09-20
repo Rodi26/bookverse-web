@@ -146,6 +146,8 @@ jobs:
 
       - name: "[Setup] Determine SemVer"
         id: set-app-version
+        env:
+          JF_OIDC_TOKEN: ${{ env.JF_OIDC_TOKEN }}
         run: |
           set -euo pipefail
           SERVICE_NAME=${SERVICE_NAME:-$(echo ${{ github.event.repository.name }} | sed 's/bookverse-//')}

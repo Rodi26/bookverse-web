@@ -111,3 +111,4 @@ application:
 # TEST 4 FINAL: Web Service tag management test - Sat Sep 20 22:16:47 IDT 2025
 # TEST 4 FIX: Web Service OIDC token timing fix - Sat Sep 20 22:20:29 IDT 2025
 # TEST 4 FINAL FIX: Web Service JFrog CLI token fallback - Sat Sep 20 22:26:21 IDT 2025
+# TEST 4 ENV FIX: Web Service explicit env variable - Sat Sep 20 22:31:17 IDT 2025
