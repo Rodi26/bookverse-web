@@ -7,3 +7,6 @@ applications:
       - type: docker
         name: web
         seed: 1.8.15
+      - type: generic
+        name: web-assets
+        seed: 1.8.15
