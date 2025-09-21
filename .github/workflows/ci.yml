@@ -653,14 +653,13 @@ jobs:
           echo "🔗 Curl (sanitized): curl -X POST '${{ vars.JFROG_URL }}/apptrust/api/v1/applications/$APPLICATION_KEY/versions/?async=false' -H 'Authorization: Bearer ***' -H 'Content-Type: application/json' -H 'Accept: application/json' -d '<payload>'"
           DEBUG_INCLUDE_PROJECT_HEADER=false print_request_debug "POST" "${{ vars.JFROG_URL }}/apptrust/api/v1/applications/$APPLICATION_KEY/versions/?async=false" "<payload>"
 
-          # Obtain ephemeral OIDC access token from configured JFrog server and ensure jq is present
-          # Use the default server that the setup action configured; older jf versions don't accept --server-id
-          eval "$(jf c export)"
-          TOKEN="${JF_ACCESS_TOKEN:-}"
+          # Use the OIDC token extracted in the previous step
+          TOKEN="${{ steps.extract-promotion-token.outputs.promotion_oidc_token }}"
           if [ -z "$TOKEN" ]; then
-            echo "❌ Unable to export OIDC access token from JFrog CLI configuration"
+            echo "❌ Missing OIDC token from promotion job JFrog CLI setup" >&2
             exit 1
           fi
+          echo "✅ Using OIDC token for application version creation"
           if ! command -v jq >/dev/null 2>&1; then sudo apt-get update -y && sudo apt-get install -y jq >/dev/null; fi
 
           # Preflight: ensure the application exists; create if 404
