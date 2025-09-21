@@ -592,24 +592,8 @@ jobs:
           APP_TAG="${TAG_OPTIONS[$TAG_INDEX]}"
           echo "🏷️ Application Version Tag (demo simulation): $APP_TAG"
 
-          # Create application version with build sources
-          APP_VERSION_PAYLOAD=$(cat << EOF
-          {
-            "version": "$APP_VERSION",
-            "tag": "$APP_TAG",
-            "sources": {
-              "builds": [
-                {
-                  "name": "$BUILD_NAME",
-                  "number": "$BUILD_NUMBER",
-                  "repository_key": "$BUILD_INFO_REPO",
-                  "include_dependencies": true
-                }
-              ]
-            }
-          }
-          EOF
-          )
+          # Create application version with build sources (matching inventory pattern)
+          APP_VERSION_PAYLOAD='{"version":"'$APP_VERSION'","tag":"'$APP_TAG'","sources":{"builds":[{"name":"'$BUILD_NAME'","number":"'$BUILD_NUMBER'","repository_key":"'${{ vars.PROJECT_KEY }}'-build-info","include_dependencies":false}]}}'
 
           # Debug: show sanitized curl and payload
           echo "📦 Application Key: $APPLICATION_KEY"
@@ -678,20 +662,29 @@ jobs:
             fi
           fi
 
-          # Create the application version via platform endpoint (not Artifactory)
-          RESP_FILE=$(mktemp)
-          HTTP_CODE=$(curl -s -o "$RESP_FILE" -w '%{http_code}' -X POST "${{ vars.JFROG_URL }}/apptrust/api/v1/applications/$APPLICATION_KEY/versions/?async=false" \
-            -H "Authorization: Bearer $TOKEN" -H "X-JFrog-Project: ${{ vars.PROJECT_KEY }}" -H "Content-Type: application/json" -H "Accept: application/json" \
-            -d "$APP_VERSION_PAYLOAD")
-          echo "📨 Response Body:"; cat "$RESP_FILE" || true; echo
-          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
-            :
-          elif [ "$HTTP_CODE" = "409" ]; then
+          # Create the application version via platform endpoint (matching inventory pattern)
+          BASE="${{ vars.JFROG_URL }}/apptrust/api/v1"
+          RESP_BODY=$(mktemp)
+          HTTP_STATUS=$(curl -sS -L -o "$RESP_BODY" -w "%{http_code}" -X POST \
+            "$BASE/applications/$APPLICATION_KEY/versions?async=false" \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$APP_VERSION_PAYLOAD" \
+            --fail-with-body || true)
+          
+          echo "🔢 HTTP Status: $HTTP_STATUS"
+          echo "📨 Response Body:"
+          cat "$RESP_BODY" || true; echo
+          
+          if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
+            echo "✅ Application version created successfully"
+          elif [ "$HTTP_STATUS" = "409" ]; then
             echo "⚠️ Application version already exists; continuing"
           else
-            echo "❌ Create application version failed (HTTP $HTTP_CODE)"; exit 1
+            echo "❌ Create application version failed (HTTP $HTTP_STATUS)"
+            exit 1
           fi
-          rm -f "$RESP_FILE"
+          rm -f "$RESP_BODY"
 
       - name: "[Evidence] Application Version Evidence"
         env:
