@@ -155,7 +155,7 @@ jobs:
           # Try to get the token from JFrog CLI configuration as fallback
           if [[ -z "${JF_OIDC_TOKEN:-}" ]]; then
             echo "🔍 JF_OIDC_TOKEN not found in environment, trying JFrog CLI export..."
-            eval "$(jf c export --show-token 2>/dev/null || true)"
+            eval "$(jf c export 2>/dev/null || true)"
             if [[ -n "${JF_ACCESS_TOKEN:-}" ]]; then
               export JF_OIDC_TOKEN="$JF_ACCESS_TOKEN"
               echo "✅ Retrieved token from JFrog CLI configuration"
@@ -480,6 +480,7 @@ jobs:
     env:
       BUILD_NAME: "bookverse-web_CI_create-promote"
       BUILD_NUMBER: ${{ needs.build-test-publish.outputs.build_number }}
+      BUILD_INFO_REPO: "artifactory-build-info"
       SERVICE_NAME: "web"
       APPLICATION_KEY: "bookverse-web"
       APP_VERSION: ${{ needs.build-test-publish.outputs.app_version }}
@@ -654,7 +655,7 @@ jobs:
 
           # Obtain ephemeral OIDC access token from configured JFrog server and ensure jq is present
           # Use the default server that the setup action configured; older jf versions don't accept --server-id
-          eval "$(jf c export --show-token)"
+          eval "$(jf c export)"
           TOKEN="${JF_ACCESS_TOKEN:-}"
           if [ -z "$TOKEN" ]; then
             echo "❌ Unable to export OIDC access token from JFrog CLI configuration"
