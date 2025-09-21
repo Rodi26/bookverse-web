@@ -5,13 +5,13 @@ import { resolveImageUrl } from '../util/imageUrl.js'
 
 export async function renderBook(rootEl, params) {
   const { id } = params
-  rootEl.innerHTML = `<main class="container"><h1>Loading...</h1></main>`
+  rootEl.innerHTML = '<main class="container"><h1>Loading...</h1></main>'
   try {
     const book = await getBook(id)
     rootEl.innerHTML = layout(book)
     bind(book)
-  } catch (e) {
-    rootEl.innerHTML = `<main class="container"><h1>Not Found</h1></main>`
+  } catch {
+    rootEl.innerHTML = '<main class="container"><h1>Not Found</h1></main>'
   }
 }
 
@@ -20,11 +20,11 @@ function bind(book) {
   const cartBtn = document.querySelector('#cart-btn')
   const recsBtn = document.querySelector('#recommendations-btn')
   const addBtn = document.querySelector('#add')
-  
+
   if (homeBtn) {
     homeBtn.onclick = () => navigateTo('/')
   }
-  
+
   if (cartBtn) {
     cartBtn.onclick = () => navigateTo('/cart')
     updateCartCount()
@@ -40,7 +40,7 @@ function bind(book) {
       }, 100)
     }
   }
-  
+
   if (addBtn) {
     updateAddButtonState(book.id)
     addBtn.onclick = () => {
@@ -81,7 +81,7 @@ function renderRating(rating) {
   const fullStars = Math.floor(rating)
   const hasHalfStar = rating % 1 >= 0.5
   const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0)
-  
+
   let stars = ''
   for (let i = 0; i < fullStars; i++) {
     stars += '<span class="star">★</span>'
@@ -92,7 +92,7 @@ function renderRating(rating) {
   for (let i = 0; i < emptyStars; i++) {
     stars += '<span class="star empty">☆</span>'
   }
-  
+
   return `<div class="rating">${stars} <span class="muted">(${rating})</span></div>`
 }
 
@@ -139,5 +139,3 @@ function layout(book) {
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]))
 }
-
-

@@ -7,27 +7,27 @@ import { resolveImageUrl } from '../util/imageUrl.js'
 export async function renderCart(rootEl) {
   const cart = getCart()
   const total = cart.items.reduce((s, i) => s + Number(i.unitPrice) * Number(i.qty), 0)
-  
+
   if (cart.items.length === 0) {
     rootEl.innerHTML = emptyCartLayout()
     bindEmptyCart()
     return
   }
-  
+
   // Fetch book details for cart items
   const bookDetails = {}
   try {
     await Promise.all(cart.items.map(async (item) => {
       try {
         bookDetails[item.bookId] = await getBook(item.bookId)
-      } catch (e) {
+      } catch {
         bookDetails[item.bookId] = { title: `Book ${item.bookId}`, cover_image_url: '', authors: ['Unknown'] }
       }
     }))
   } catch (e) {
     console.error('Error fetching book details:', e)
   }
-  
+
   rootEl.innerHTML = cartLayout(cart, total, bookDetails)
   bindCart(cart)
 }
@@ -42,11 +42,11 @@ function bindEmptyCart() {
 function bindCart(cart) {
   const backBtn = document.querySelector('#back-btn')
   const buyBtn = document.querySelector('#buy-now')
-  
+
   if (backBtn) {
     backBtn.onclick = () => navigateTo('/')
   }
-  
+
   // Remove buttons
   document.querySelectorAll('[data-remove-id]').forEach(btn => {
     const bookId = btn.getAttribute('data-remove-id')
@@ -55,17 +55,17 @@ function bindCart(cart) {
       renderCart(document.querySelector('#app > main').parentElement)
     }
   })
-  
+
   if (buyBtn) {
     buyBtn.onclick = async () => {
       buyBtn.disabled = true
       buyBtn.textContent = 'Processing...'
       const status = document.querySelector('#status')
-      
+
       try {
         const payloadItems = cart.items.map(i => ({ bookId: i.bookId, qty: i.qty, unitPrice: i.unitPrice }))
         const res = await createOrder('demo-user', payloadItems)
-        
+
         // Show success message
         status.innerHTML = `
           <div style="background: var(--brand-success); color: white; padding: 20px; border-radius: 12px; text-align: center; margin: 20px 0;">
@@ -74,12 +74,12 @@ function bindCart(cart) {
             <button class="btn" id="back-home" style="background: white; color: var(--brand-success);">Back to Home</button>
           </div>
         `
-        
+
         clearCart()
-        
+
         // Bind back to home button
         document.querySelector('#back-home').onclick = () => navigateTo('/')
-        
+
       } catch (e) {
         status.innerHTML = `
           <div style="background: var(--brand-danger); color: white; padding: 16px; border-radius: 8px; margin: 20px 0;">
@@ -183,5 +183,4 @@ function cartItemCard(item, book) {
   </div>
   `
 }
-
 

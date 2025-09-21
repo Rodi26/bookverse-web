@@ -287,6 +287,13 @@ jobs:
           
           echo "✅ Web assets package evidence attached via shared library: config-bundle"
 
+      - name: "[Build] Docker Registry Authentication"
+        uses: ../../../bookverse-infra/.github/actions/docker-registry-auth@main
+        with:
+          oidc-token: ${{ steps.jfrog-cli-auth.outputs.oidc-token }}
+          registry-url: ${{ vars.JFROG_URL }}
+          verbosity: 'feedback'
+
       - name: "[Build] Web image"
         run: |
           set -euo pipefail

@@ -50,13 +50,13 @@ export async function attachTrustPanel() {
           content.innerHTML = renderEvidence(data)
           return
         }
-      } catch (e) {
+      } catch {
         // Fallback to showing app info
       }
-      
+
       // Show current application information
       content.innerHTML = renderAppInfo()
-    } catch (e) {
+    } catch {
       content.textContent = 'Error loading release information.'
     }
   }
@@ -90,7 +90,7 @@ function renderAppInfo() {
     { name: 'Recommendations', url: config.recommendationsBaseUrl || 'Not configured', status: config.recommendationsBaseUrl ? '🟢' : '🔴' },
     { name: 'Checkout', url: config.checkoutBaseUrl || 'Not configured', status: config.checkoutBaseUrl ? '🟢' : '🔴' }
   ]
-  
+
   return `
     <div style="background: var(--bg); padding: 16px; border-radius: 8px; margin-bottom: 16px;">
       <p style="margin: 0 0 8px 0;"><strong style="color: var(--brand);">Application:</strong> <code style="background: var(--panel); padding: 2px 6px; border-radius: 4px;">BookVerse Web</code></p>
@@ -116,5 +116,4 @@ function renderAppInfo() {
     </div>
   `
 }
-
 

@@ -11,11 +11,10 @@ export async function getTrending(limit = 10) {
 }
 
 export async function getPersonalized(payload) {
-  return httpJson('', `/api/v1/recommendations/personalized`, {
+  return httpJson('', '/api/v1/recommendations/personalized', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload || {}),
   })
 }
-
 

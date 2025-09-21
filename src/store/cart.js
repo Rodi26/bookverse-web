@@ -38,4 +38,3 @@ export function isInCart(bookId) {
   return cart.items.some(item => item.bookId === bookId)
 }
 
-

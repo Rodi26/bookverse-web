@@ -6,7 +6,7 @@
 function serviceBase(service) {
   // If service is empty, use relative URLs (nginx proxy handles routing)
   if (!service) return ''
-  
+
   const cfg = window.__BOOKVERSE_CONFIG__ || {}
   if (service === 'inventory') return cfg.inventoryBaseUrl || ''
   if (service === 'recommendations') return cfg.recommendationsBaseUrl || ''
@@ -30,10 +30,10 @@ function generateUUID() {
 function withHeaders(opts = {}) {
   const headers = new Headers(opts.headers || {})
   headers.set('X-Request-Id', generateUUID())
-  
+
   // Authentication disabled for demo
   // No authorization headers needed
-  
+
   // Minimal traceparent: version 00, random 16-byte trace id, 8-byte span id
   const traceId = generateUUID().replace(/-/g, '').substring(0, 32)
   const spanId = generateUUID().replace(/-/g, '').substring(0, 16)
@@ -65,18 +65,13 @@ function retryWithJitter(fn, { retries = 2, baseMs = 200 } = {}) {
 export async function httpRequest(service, path, opts = {}) {
   const base = serviceBase(service)
   const url = `${base}${path}`
-  try {
-    const res = await retryWithJitter(() => fetchWithTimeout(url, withHeaders(opts)), { retries: 2, baseMs: 200 })
-    if (!res.ok) throw new Error(`http_${res.status}`)
-    return res
-  } catch (e) {
-    throw e
-  }
+  const res = await retryWithJitter(() => fetchWithTimeout(url, withHeaders(opts)), { retries: 2, baseMs: 200 })
+  if (!res.ok) throw new Error(`http_${res.status}`)
+  return res
 }
 
 export async function httpJson(service, path, opts = {}) {
   const res = await httpRequest(service, path, opts)
   return res.json()
 }
-
 

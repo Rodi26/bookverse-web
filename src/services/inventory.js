@@ -14,4 +14,3 @@ export async function listInventory(page = 1, perPage = 10, lowStock = false) {
   return httpJson('', `/api/v1/inventory?${qs.toString()}`)
 }
 
-

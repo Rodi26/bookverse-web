@@ -15,7 +15,7 @@ function computeIdempotencyKey(items = []) {
 export async function createOrder(userId, items) {
   const body = { userId, items }
   const idem = computeIdempotencyKey(items)
-  return httpJson('', `/orders`, {
+  return httpJson('', '/orders', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Idempotency-Key': idem },
     body: JSON.stringify(body),
@@ -25,5 +25,4 @@ export async function createOrder(userId, items) {
 export async function getOrder(orderId) {
   return httpJson('', `/orders/${encodeURIComponent(orderId)}`)
 }
-
 

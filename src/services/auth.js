@@ -13,7 +13,7 @@ const debugLog = DEBUG ? console.log : () => {}
 
 /**
  * OIDC Authentication Service for BookVerse Web
- * 
+ *
  * Provides secure authentication using OIDC Authorization Code Flow with PKCE.
  * Supports automatic token refresh and secure storage.
  */

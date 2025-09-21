@@ -10,7 +10,7 @@ import { resolveImageUrl } from '../util/imageUrl.js'
 export function renderCatalog(rootEl) {
   // Demo mode: Skip authentication check
   console.log('🎯 Rendering catalog in demo mode (no authentication required)')
-  
+
   rootEl.innerHTML = layout('Loading...')
   let allBooks = []
   let filteredBooks = []
@@ -22,25 +22,19 @@ export function renderCatalog(rootEl) {
   // Load all books at once
   const loadAllBooks = async () => {
     try {
-      // Debug: Starting book loading
-      
       // Load multiple pages to get all books
       let allData = []
       let page = 1
       let hasMore = true
-      
+
       while (hasMore) {
-        // Debug: Loading page ${page}
         const data = await listBooks(page, 50) // Load 50 per page
-        // Debug: Page ${page} loaded: ${data.books?.length} books
-        
+
         allData = allData.concat(data.books || [])
         hasMore = data.pagination && page < data.pagination.pages
         page++
       }
-      
-      // Debug: All books loaded: ${allData.length} total books
-      
+
       allBooks = allData
       filteredBooks = allBooks
       displayedBooks = []
@@ -49,8 +43,8 @@ export function renderCatalog(rootEl) {
       updateDisplay()
       bind()
     } catch (error) {
-      console.error('❌ CATALOG: Book loading failed:', error);
-      console.error('❌ CATALOG: Error details:', error.message, error.stack);
+      console.error('❌ CATALOG: Book loading failed:', error)
+      console.error('❌ CATALOG: Error details:', error.message, error.stack)
       rootEl.innerHTML = layout('Error loading books. Please try again.')
     }
   }
@@ -75,7 +69,7 @@ export function renderCatalog(rootEl) {
     if (!query) {
       filteredBooks = allBooks
     } else {
-      filteredBooks = allBooks.filter(book => 
+      filteredBooks = allBooks.filter(book =>
         book.title.toLowerCase().includes(query) ||
         book.authors.some(author => author.toLowerCase().includes(query)) ||
         book.genres.some(genre => genre.toLowerCase().includes(query))
@@ -146,7 +140,7 @@ export function renderCatalog(rootEl) {
 
     // Load more on scroll (using window scroll instead of container scroll)
     window.onscroll = () => {
-      const { scrollY, scrollHeight, innerHeight } = window
+      const { scrollY, innerHeight } = window
       if (scrollY + innerHeight >= document.body.scrollHeight - 100) {
         if (displayedBooks.length < filteredBooks.length) {
           loadMoreBooks()
@@ -171,10 +165,10 @@ export function renderCatalog(rootEl) {
     rootEl.querySelectorAll('[data-add-id]').forEach(btn => {
       const id = btn.getAttribute('data-add-id')
       const price = Number(btn.getAttribute('data-price') || '0')
-      
+
       btn.onclick = (e) => {
         e.stopPropagation() // Prevent card click
-        
+
         if (isInCart(id)) {
           removeFromCart(id)
           btn.textContent = 'Add'
@@ -184,7 +178,7 @@ export function renderCatalog(rootEl) {
           btn.textContent = 'Remove'
           btn.classList.add('remove')
         }
-        
+
         // Update cart count
         updateCartCount()
       }
@@ -219,7 +213,7 @@ export function renderCatalog(rootEl) {
 
   const toggleRecommendations = async () => {
     const recsBtn = rootEl.querySelector('#recommendations-btn')
-    
+
     // Check if currently showing trending
     if (recsBtn.textContent.includes('Show All')) {
       // Switch back to showing all books
@@ -232,35 +226,35 @@ export function renderCatalog(rootEl) {
     } else {
       // Filter to show only trending books
       recsBtn.textContent = '📚 Show All Books'
-      
+
       try {
         // Get trending book titles
         let trendingTitles = []
         try {
           const trendingData = await getTrending(3)
           trendingTitles = (trendingData.recommendations || []).map(r => r.title)
-        } catch (e) {
+        } catch {
           // Fallback: use curated trending titles
-          trendingTitles = ["The Lord of the Rings", "1984", "The Martian"]
+          trendingTitles = ['The Lord of the Rings', '1984', 'The Martian']
         }
-        
+
         // Filter main catalog to only show trending books
-        filteredBooks = allBooks.filter(book => 
+        filteredBooks = allBooks.filter(book =>
           trendingTitles.includes(book.title)
         ).slice(0, 3) // Ensure we only show 3 books max
-        
+
         displayedBooks = []
         currentBatch = 0
         loadMoreBooks()
         updateDisplay()
-        
+
       } catch (e) {
         console.error('Error loading trending books:', e)
         // Fallback to top-rated books
         filteredBooks = allBooks
           .sort((a, b) => (b.rating || 0) - (a.rating || 0))
           .slice(0, 3)
-        
+
         displayedBooks = []
         currentBatch = 0
         loadMoreBooks()
@@ -268,7 +262,6 @@ export function renderCatalog(rootEl) {
       }
     }
   }
-
 
   loadAllBooks()
 }
@@ -312,7 +305,7 @@ function renderRating(rating) {
   const fullStars = Math.floor(rating)
   const hasHalfStar = rating % 1 >= 0.5
   const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0)
-  
+
   let stars = ''
   for (let i = 0; i < fullStars; i++) {
     stars += '<span class="star">★</span>'
@@ -323,14 +316,14 @@ function renderRating(rating) {
   for (let i = 0; i < emptyStars; i++) {
     stars += '<span class="star empty">☆</span>'
   }
-  
+
   return `<div class="rating">${stars} <span class="muted">(${rating})</span></div>`
 }
 
 function card(book) {
   const price = Number(book.price)
   const rating = book.rating || 0
-  
+
   return `
   <article class="card book-card clickable" data-book-id="${book.id}">
     <img class="cover" src="${resolveImageUrl(book.cover_image_url, window.__BOOKVERSE_CONFIG__.inventoryBaseUrl)}" alt="${escapeHtml(book.title)}" loading="lazy"/>
@@ -345,9 +338,6 @@ function card(book) {
   `
 }
 
-
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]))
 }
-
-

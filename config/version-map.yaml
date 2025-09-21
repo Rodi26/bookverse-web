@@ -1,11 +1,9 @@
 applications:
   - key: bookverse-web
     seeds:
-      application: 2.4.16
+      application: 1.7.2
+      build: 2.18.9
     packages:
       - type: docker
         name: web
-        seed: 1.6.14
-      - type: generic
-        name: web-assets
-        seed: 3.31.50
+        seed: 1.8.15

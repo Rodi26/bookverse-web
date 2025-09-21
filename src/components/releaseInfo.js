@@ -47,153 +47,153 @@ export function renderReleaseInfo() {
     <div id="release-info-toggle" style="position: fixed; bottom: 20px; left: 20px; background: var(--brand); color: white; border: none; border-radius: 50px; padding: 12px 20px; cursor: pointer; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); z-index: 1000; transition: transform 0.2s ease;">
       📊 Release Info
     </div>
-  `;
+  `
 }
 
 export function initReleaseInfo() {
   // Store the startup time
-  window.__BOOKVERSE_STARTUP_TIME__ = Date.now();
-  
+  window.__BOOKVERSE_STARTUP_TIME__ = Date.now()
+
   // Add the release info to the page
-  document.body.insertAdjacentHTML('beforeend', renderReleaseInfo());
-  
+  document.body.insertAdjacentHTML('beforeend', renderReleaseInfo())
+
   // Event listeners
-  document.getElementById('release-info-toggle').addEventListener('click', showReleaseInfo);
-  document.getElementById('close-release-info').addEventListener('click', hideReleaseInfo);
-  document.getElementById('release-close-btn').addEventListener('click', hideReleaseInfo);
-  
+  document.getElementById('release-info-toggle').addEventListener('click', showReleaseInfo)
+  document.getElementById('close-release-info').addEventListener('click', hideReleaseInfo)
+  document.getElementById('release-close-btn').addEventListener('click', hideReleaseInfo)
+
   // Click outside to close
   document.getElementById('release-info-modal').addEventListener('click', (e) => {
     if (e.target.id === 'release-info-modal') {
-      hideReleaseInfo();
+      hideReleaseInfo()
     }
-  });
-  
+  })
+
   // Hover effect for toggle button
-  const toggle = document.getElementById('release-info-toggle');
-  toggle.addEventListener('mouseenter', () => toggle.style.transform = 'scale(1.05)');
-  toggle.addEventListener('mouseleave', () => toggle.style.transform = 'scale(1)');
-  
+  const toggle = document.getElementById('release-info-toggle')
+  toggle.addEventListener('mouseenter', () => toggle.style.transform = 'scale(1.05)')
+  toggle.addEventListener('mouseleave', () => toggle.style.transform = 'scale(1)')
+
   // Load version information
-  loadVersionInfo();
+  loadVersionInfo()
 }
 
 function showReleaseInfo() {
-  document.getElementById('release-info-modal').style.display = 'flex';
-  loadVersionInfo(); // Refresh data when opened
+  document.getElementById('release-info-modal').style.display = 'flex'
+  loadVersionInfo() // Refresh data when opened
 }
 
 function hideReleaseInfo() {
-  document.getElementById('release-info-modal').style.display = 'none';
+  document.getElementById('release-info-modal').style.display = 'none'
 }
 
 async function loadVersionInfo() {
-  const config = window.__BOOKVERSE_CONFIG__ || {};
-  
+  const config = window.__BOOKVERSE_CONFIG__ || {}
+
   // Calculate uptime
-  const startTime = window.__BOOKVERSE_STARTUP_TIME__ || Date.now();
-  const uptimeMs = Date.now() - startTime;
-  const uptimeMinutes = Math.floor(uptimeMs / 60000);
-  const uptimeSeconds = Math.floor((uptimeMs % 60000) / 1000);
-  const uptimeText = uptimeMinutes > 0 ? `${uptimeMinutes}m ${uptimeSeconds}s` : `${uptimeSeconds}s`;
-  
+  const startTime = window.__BOOKVERSE_STARTUP_TIME__ || Date.now()
+  const uptimeMs = Date.now() - startTime
+  const uptimeMinutes = Math.floor(uptimeMs / 60000)
+  const uptimeSeconds = Math.floor((uptimeMs % 60000) / 1000)
+  const uptimeText = uptimeMinutes > 0 ? `${uptimeMinutes}m ${uptimeSeconds}s` : `${uptimeSeconds}s`
+
   // Web application info - get from actual build data
-  const buildInfo = await getBuildInfo();
-  document.getElementById('web-version').textContent = buildInfo.version || 'Unknown';
-  document.getElementById('web-image').textContent = buildInfo.image || 'Unknown';
-  document.getElementById('version-changed').textContent = buildInfo.lastUpdated || 'Unknown';
-  
+  const buildInfo = await getBuildInfo()
+  document.getElementById('web-version').textContent = buildInfo.version || 'Unknown'
+  document.getElementById('web-image').textContent = buildInfo.image || 'Unknown'
+  document.getElementById('version-changed').textContent = buildInfo.lastUpdated || 'Unknown'
+
   // System info
-  document.getElementById('uptime').textContent = uptimeText;
-  document.getElementById('user-agent').textContent = navigator.userAgent.split(' ').slice(-2).join(' ');
-  document.getElementById('timestamp').textContent = new Date().toLocaleString();
-  document.getElementById('config-status').textContent = config.inventoryBaseUrl ? '✅ All Services Configured' : '❌ Missing Service URLs';
-  
+  document.getElementById('uptime').textContent = uptimeText
+  document.getElementById('user-agent').textContent = navigator.userAgent.split(' ').slice(-2).join(' ')
+  document.getElementById('timestamp').textContent = new Date().toLocaleString()
+  document.getElementById('config-status').textContent = config.inventoryBaseUrl ? '✅ All Services Configured' : '❌ Missing Service URLs'
+
   // Load backend service versions
-  await loadBackendVersions(config);
+  await loadBackendVersions(config)
 }
 
 async function getBuildInfo() {
   // Get build info from meta tags
-  const version = document.querySelector('meta[name="app-version"]')?.getAttribute('content') || '2.4.16';
-  const image = document.querySelector('meta[name="app-image"]')?.getAttribute('content') || 'bookverse-web:18-1';
-  const buildTime = document.querySelector('meta[name="build-time"]')?.getAttribute('content');
-  
+  const version = document.querySelector('meta[name="app-version"]')?.getAttribute('content') || '2.4.16'
+  const image = document.querySelector('meta[name="app-image"]')?.getAttribute('content') || 'bookverse-web:18-1'
+  const buildTime = document.querySelector('meta[name="build-time"]')?.getAttribute('content')
+
   return {
     version,
     image,
     lastUpdated: buildTime ? new Date(buildTime).toLocaleDateString() : new Date().toLocaleDateString()
-  };
+  }
 }
 
 async function loadBackendVersions(config) {
   // Real versions from current helm chart and version maps
-  const realVersions = {
+  const _realVersions = {
     'platform-version': '2.1.38',  // Platform version from helm chart
-    'inventory-version': '2.7.13', // Application version from version-map.yaml  
+    'inventory-version': '2.7.13', // Application version from version-map.yaml
     'recommendations-version': '4.1.18', // Application version from version-map.yaml
     'checkout-version': '3.2.15' // Application version from version-map.yaml
-  };
-  
+  }
+
   const services = [
     { id: 'platform-version', name: 'Platform', url: config.platformBaseUrl || '', healthPath: '/health' },
     { id: 'inventory-version', name: 'Inventory', url: config.inventoryBaseUrl, healthPath: '/health' },
     { id: 'recommendations-version', name: 'Recommendations', url: config.recommendationsBaseUrl, healthPath: '/health' },
     { id: 'checkout-version', name: 'Checkout', url: config.checkoutBaseUrl, healthPath: '/health' }
-  ];
-  
+  ]
+
   for (const service of services) {
     try {
       if (!service.url) {
-        document.getElementById(service.id).textContent = 'Not configured';
-        continue;
+        document.getElementById(service.id).textContent = 'Not configured'
+        continue
       }
-      
+
       // Try to get version from health endpoint
-      const healthUrl = `${service.url}${service.healthPath}`;
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2000); // Reduced timeout
-      
-      const response = await fetch(healthUrl, { 
+      const healthUrl = `${service.url}${service.healthPath}`
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 2000) // Reduced timeout
+
+      const response = await fetch(healthUrl, {
         method: 'GET',
         headers: { 'Accept': 'application/json' },
         signal: controller.signal
-      });
-      
-      clearTimeout(timeoutId);
-      
+      })
+
+      clearTimeout(timeoutId)
+
       if (response.ok) {
-        const data = await response.json();
-        let version = 'Online';
-        
+        const data = await response.json()
+        let version = 'Online'
+
         // Extract version from different possible fields
-        if (data.version) {
-          version = data.version;
+        if (data.version && data.service) {
+          version = `${data.service} v${data.version}`
+        } else if (data.version) {
+          version = data.version
         } else if (data.build_version) {
-          version = data.build_version;
+          version = data.build_version
         } else if (data.app_version) {
-          version = data.app_version;
-        } else if (data.service && data.version) {
-          version = `${data.service} v${data.version}`;
+          version = data.app_version
         } else if (data.service) {
-          version = `${data.service} - ${data.status || 'Running'}`;
+          version = `${data.service} - ${data.status || 'Running'}`
         } else if (data.status) {
-          version = `${data.status === 'ok' || data.status === 'healthy' ? '✅' : '⚠️'} ${data.status}`;
+          version = `${data.status === 'ok' || data.status === 'healthy' ? '✅' : '⚠️'} ${data.status}`
         }
-        
-        document.getElementById(service.id).textContent = version;
+
+        document.getElementById(service.id).textContent = version
       } else {
-        document.getElementById(service.id).textContent = `❌ HTTP ${response.status}`;
+        document.getElementById(service.id).textContent = `❌ HTTP ${response.status}`
       }
     } catch (error) {
       // FAIL FAST: Show clear error states without fallback versions
-      console.error(`❌ SERVICE ERROR: ${service.name} health check failed:`, error);
+      console.error(`❌ SERVICE ERROR: ${service.name} health check failed:`, error)
       if (error.name === 'AbortError') {
-        document.getElementById(service.id).textContent = `❌ TIMEOUT (2s)`;
+        document.getElementById(service.id).textContent = '❌ TIMEOUT (2s)'
       } else if (error.message.includes('fetch')) {
-        document.getElementById(service.id).textContent = `❌ CONNECTION FAILED`;
+        document.getElementById(service.id).textContent = '❌ CONNECTION FAILED'
       } else {
-        document.getElementById(service.id).textContent = `❌ ERROR: ${error.message}`;
+        document.getElementById(service.id).textContent = `❌ ERROR: ${error.message}`
       }
     }
   }

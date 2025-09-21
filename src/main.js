@@ -32,10 +32,10 @@ async function bootstrap() {
   if (!location.hash) {
     navigateTo('/')
   }
-  
+
   // Initialize other components
   initReleaseInfo()
-  
+
   // Expose functions globally for debugging and ensure they're available
   window.httpRequest = httpRequest
   window.httpJson = httpJson
@@ -43,10 +43,8 @@ async function bootstrap() {
   window.getBook = getBook
   window.navigateTo = navigateTo
   // authService removed for demo
-  
+
   // Debug: BookVerse functions exposed globally
 }
 
 bootstrap()
-
-

@@ -32,7 +32,10 @@ function compile(pattern) {
   const parts = pattern.split('/').filter(Boolean)
   const keys = []
   const regexParts = parts.map(p => {
-    if (p.startsWith(':')) { keys.push(p.slice(1)); return '([^/]+)' }
+    if (p.startsWith(':')) {
+      keys.push(p.slice(1))
+      return '([^/]+)'
+    }
     return p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   })
   const regex = new RegExp('^/' + regexParts.join('/') + '$')
@@ -47,5 +50,4 @@ function compile(pattern) {
     }
   }
 }
-
 

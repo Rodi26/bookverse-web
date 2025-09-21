@@ -39,7 +39,7 @@ export function renderLogin() {
  */
 export function renderAuthStatus() {
   const user = authService.getUserProfile()
-  
+
   if (!user) {
     return `
       <div class="auth-status">
@@ -52,10 +52,10 @@ export function renderAuthStatus() {
     <div class="auth-status authenticated">
       <div class="user-info">
         <div class="user-avatar">
-          ${user.picture ? 
-            `<img src="${user.picture}" alt="${user.name || user.email}" />` :
-            `<div class="avatar-placeholder">${(user.name || user.email || 'U').charAt(0).toUpperCase()}</div>`
-          }
+          ${user.picture ?
+    `<img src="${user.picture}" alt="${user.name || user.email}" />` :
+    `<div class="avatar-placeholder">${(user.name || user.email || 'U').charAt(0).toUpperCase()}</div>`
+}
         </div>
         <div class="user-details">
           <span class="user-name">${user.name || user.email}</span>
@@ -112,7 +112,7 @@ export function initAuthHandlers() {
         showErrorMessage('Login failed. Please try again.')
       }
     }
-    
+
     // Logout button handler
     if (e.target.id === 'auth-logout-btn') {
       e.preventDefault()
@@ -157,10 +157,10 @@ function showErrorMessage(message) {
     toast.className = 'error-toast'
     document.body.appendChild(toast)
   }
-  
+
   toast.textContent = message
   toast.classList.add('show')
-  
+
   // Auto-hide after 5 seconds
   setTimeout(() => {
     toast.classList.remove('show')
@@ -172,14 +172,14 @@ function showErrorMessage(message) {
  */
 export async function handleAuthCallback() {
   try {
-    const user = await authService.handleCallback()
-    // Debug: Authentication callback successful: ${user.profile?.email}
-    
+    const _user = await authService.handleCallback()
+    // Debug: Authentication callback successful
+
     // Redirect to intended page or home
     const returnUrl = sessionStorage.getItem('returnUrl') || '/'
     sessionStorage.removeItem('returnUrl')
     navigateTo(returnUrl)
-    
+
   } catch (error) {
     console.error('❌ Authentication callback failed:', error)
     showErrorMessage('Authentication failed. Please try again.')
