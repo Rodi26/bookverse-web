@@ -478,7 +478,7 @@ jobs:
       id-token: write
 
     env:
-      BUILD_NAME: "bookverse-web_CI_create-promote"
+      BUILD_NAME: ${{ needs.build-test-publish.outputs.build_name }}
       BUILD_NUMBER: ${{ needs.build-test-publish.outputs.build_number }}
       BUILD_INFO_REPO: "artifactory-build-info"
       SERVICE_NAME: "web"
