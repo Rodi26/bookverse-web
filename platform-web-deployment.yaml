@@ -5,7 +5,7 @@ metadata:
     argocd.argoproj.io/tracking-id: platform-prod:apps/Deployment:bookverse-prod/platform-web
     deployment.kubernetes.io/revision: "5"
     kubectl.kubernetes.io/last-applied-configuration: |
-      {"apiVersion":"apps/v1","kind":"Deployment","metadata":{"annotations":{"argocd.argoproj.io/tracking-id":"platform-prod:apps/Deployment:bookverse-prod/platform-web"},"name":"platform-web","namespace":"bookverse-prod"},"spec":{"replicas":1,"selector":{"matchLabels":{"app":"platform-web"}},"template":{"metadata":{"labels":{"app":"platform-web"}},"spec":{"containers":[{"env":[{"name":"BOOKVERSE_ENV","value":"DEV"},{"name":"INVENTORY_BASE_URL","value":"http://inventory"},{"name":"RECOMMENDATIONS_BASE_URL","value":"http://recommendations"},{"name":"CHECKOUT_BASE_URL","value":"http://checkout"}],"image":"apptrustswampupc.jfrog.io/bookverse-web-internal-docker-release-local/web:22-1","livenessProbe":{"httpGet":{"path":"/","port":8080},"initialDelaySeconds":15,"periodSeconds":20},"name":"web","ports":[{"containerPort":8080}],"readinessProbe":{"httpGet":{"path":"/","port":8080},"initialDelaySeconds":5,"periodSeconds":10}}]}}}}
+      {"apiVersion":"apps/v1","kind":"Deployment","metadata":{"annotations":{"argocd.argoproj.io/tracking-id":"platform-prod:apps/Deployment:bookverse-prod/platform-web"},"name":"platform-web","namespace":"bookverse-prod"},"spec":{"replicas":1,"selector":{"matchLabels":{"app":"platform-web"}},"template":{"metadata":{"labels":{"app":"platform-web"}},"spec":{"containers":[{"env":[{"name":"BOOKVERSE_ENV","value":"DEV"},{"name":"INVENTORY_BASE_URL","value":"http://inventory"},{"name":"RECOMMENDATIONS_BASE_URL","value":"http://recommendations"},{"name":"CHECKOUT_BASE_URL","value":"http://checkout"}],"image":"${DOCKER_REGISTRY}/bookverse-web-internal-docker-release-local/web:22-1","livenessProbe":{"httpGet":{"path":"/","port":8080},"initialDelaySeconds":15,"periodSeconds":20},"name":"web","ports":[{"containerPort":8080}],"readinessProbe":{"httpGet":{"path":"/","port":8080},"initialDelaySeconds":5,"periodSeconds":10}}]}}}}
   creationTimestamp: "2025-09-12T14:38:28Z"
   generation: 5
   name: platform-web
@@ -42,7 +42,7 @@ spec:
           value: http://recommendations
         - name: CHECKOUT_BASE_URL
           value: http://checkout
-        image: apptrustswampupc.jfrog.io/bookverse-web-internal-docker-release-local/web:22-1
+        image: ${DOCKER_REGISTRY}/bookverse-web-internal-docker-release-local/web:22-1
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 3

@@ -145,28 +145,23 @@ jobs:
 
       - name: "[Setup] Determine SemVer"
         id: set-app-version
-        env:
-          JF_OIDC_TOKEN: ${{ env.JF_OIDC_TOKEN }}
         run: |
           set -euo pipefail
           SERVICE_NAME=${SERVICE_NAME:-$(echo ${{ github.event.repository.name }} | sed 's/bookverse-//')}
           APPLICATION_KEY="bookverse-$SERVICE_NAME"
+          # Use OIDC token directly from JFrog CLI step output
+          echo "🔍 Using OIDC token directly from JFrog CLI step output for semver determination..."
           
-          # Try to get the token from JFrog CLI configuration as fallback
-          if [[ -z "${JF_OIDC_TOKEN:-}" ]]; then
-            echo "🔍 JF_OIDC_TOKEN not found in environment, trying JFrog CLI export..."
-            eval "$(jf c export 2>/dev/null || true)"
-            if [[ -n "${JF_ACCESS_TOKEN:-}" ]]; then
-              export JF_OIDC_TOKEN="$JF_ACCESS_TOKEN"
-              echo "✅ Retrieved token from JFrog CLI configuration"
-            else
-              echo "❌ Missing JF_OIDC_TOKEN and unable to retrieve from JFrog CLI. Ensure OIDC exchange step succeeded." >&2
-              echo "🔍 DEBUG: Available environment variables:"
-              env | grep -E "(JF_|JFROG_)" || echo "No JF/JFROG variables found"
-              exit 1
-            fi
+          # Test if we can access the token directly without intermediate assignment
+          OIDC_TOKEN="${{ steps.jfrog-cli-auth.outputs.oidc-token }}"
+          if [[ -z "$OIDC_TOKEN" ]]; then
+            echo "❌ OIDC token not available from JFrog CLI step" >&2
+            exit 1
           fi
-          echo "✅ Using persisted JFrog access token for semver determination"
+          
+          echo "✅ OIDC token available from JFrog CLI step"
+          echo "📋 Token length: ${#OIDC_TOKEN} characters"
+          echo "📋 Token starts with: ${OIDC_TOKEN:0:10}..."
           echo "📋 Using shared semver logic from bookverse-infra"
           
           # Validate and prepare script files
@@ -182,11 +177,12 @@ jobs:
           fi
           
           echo "🔍 Calculating versions for all packages using shared logic..."
+          # Use the OIDC token from the variable
           SEMVER_OUTPUT=$(./determine-semver.sh \
             --application-key "$APPLICATION_KEY" \
             --version-map "./config/version-map.yaml" \
             --jfrog-url "${{ vars.JFROG_URL }}" \
-            --jfrog-token "$JF_OIDC_TOKEN" \
+            --jfrog-token "$OIDC_TOKEN" \
             --project-key "${{ vars.PROJECT_KEY }}" \
             --packages "web,web-assets" \
             --verbose)
