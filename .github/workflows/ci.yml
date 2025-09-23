@@ -233,7 +233,7 @@ jobs:
           OIDC_TOKEN="${{ steps.jfrog-cli-auth.outputs.oidc-token }}"
           if [[ -n "$OIDC_TOKEN" && "$OIDC_TOKEN" != "null" ]]; then
             echo "✅ Successfully retrieved OIDC token from JFrog CLI step output (oidc-token)"
-            echo "📋 Token length: ${
+            echo "📋 Token length: ${#PROMOTION_OIDC_TOKEN}"
           else
             echo "❌ OIDC token not available from JFrog CLI step output (oidc-token)"
             exit 1
@@ -268,7 +268,7 @@ jobs:
           fi
           
           echo "✅ OIDC token available from JFrog CLI step"
-          echo "📋 Token length: ${
+          echo "📋 Token length: ${#PROMOTION_OIDC_TOKEN}"
           echo "📋 Token starts with: ${OIDC_TOKEN:0:10}..."
           echo "📋 Using shared semver logic from bookverse-infra"
           
@@ -427,8 +427,8 @@ jobs:
           fi
           
           DOCKER_REGISTRY="${REGISTRY_URL}"
-          DOCKER_REGISTRY="${DOCKER_REGISTRY
-          DOCKER_REGISTRY="${DOCKER_REGISTRY
+          DOCKER_REGISTRY="${DOCKER_REGISTRY#https://}"
+          DOCKER_REGISTRY="${DOCKER_REGISTRY#https://}"
           DOCKER_REGISTRY="${DOCKER_REGISTRY%/}"
           
           echo "🐳 Registry hostname: $DOCKER_REGISTRY"
@@ -436,7 +436,7 @@ jobs:
           echo "🔍 Parsing JWT token for username..."
           TOKEN_PAYLOAD=$(echo "$OIDC_TOKEN" | cut -d. -f2)
           
-          case $((${
+          case $((${#TOKEN_PAYLOAD} % 4)) in
             2) TOKEN_PAYLOAD="${TOKEN_PAYLOAD}==" ;;
             3) TOKEN_PAYLOAD="${TOKEN_PAYLOAD}=" ;;
           esac
@@ -450,7 +450,7 @@ jobs:
           DOCKER_USER=$(echo "$CLAIMS" | jq -r '.username // .sub // .subject // "oauth2_access_token"' 2>/dev/null || echo "oauth2_access_token")
           
           if [[ "$DOCKER_USER" == *"/users/"* ]]; then
-            DOCKER_USER=${DOCKER_USER
+            DOCKER_USER=${DOCKER_USER##*/users/}
             echo "🔍 Extracted username from JFrog path format"
           fi
           
@@ -472,7 +472,7 @@ jobs:
             echo "🔍 Debugging information:"
             echo "  • Registry: $DOCKER_REGISTRY"
             echo "  • Username: $DOCKER_USER"
-            echo "  • Token length: ${
+            echo "  • Token length: ${#OIDC_TOKEN}"
             echo "  • Token prefix: ${OIDC_TOKEN:0:20}..."
             exit 1
           fi
@@ -624,7 +624,7 @@ jobs:
           PROMOTION_OIDC_TOKEN="${{ steps.jfrog-cli-auth.outputs.oidc-token }}"
           if [[ -n "$PROMOTION_OIDC_TOKEN" && "$PROMOTION_OIDC_TOKEN" != "null" ]]; then
             echo "✅ Successfully retrieved OIDC token from JFrog CLI step output (oidc-token)"
-            echo "📋 Token length: ${
+            echo "📋 Token length: ${#PROMOTION_OIDC_TOKEN}"
             echo "promotion_oidc_token=$PROMOTION_OIDC_TOKEN" >> $GITHUB_OUTPUT
             echo "JF_OIDC_TOKEN=$PROMOTION_OIDC_TOKEN" >> $GITHUB_ENV
           else
@@ -686,7 +686,7 @@ jobs:
             "cleanup"
           )
 
-          TAG_INDEX=$((${GITHUB_RUN_NUMBER:-0} % ${
+          TAG_INDEX=$((${GITHUB_RUN_NUMBER:-0} % ${#TAG_OPTIONS[@]}))
           APP_TAG="${TAG_OPTIONS[$TAG_INDEX]}"
           echo "🏷️ Application Version Tag (demo simulation): $APP_TAG"
 
