@@ -36,12 +36,14 @@ spec:
       - env:
         - name: BOOKVERSE_ENV
           value: DEV
+        - name: PLATFORM_BASE_URL
+          value: http://platform-web.bookverse-prod.svc.cluster.local
         - name: INVENTORY_BASE_URL
-          value: http://inventory
+          value: http://inventory.bookverse-prod.svc.cluster.local
         - name: RECOMMENDATIONS_BASE_URL
-          value: http://recommendations
+          value: http://recommendations.bookverse-prod.svc.cluster.local
         - name: CHECKOUT_BASE_URL
-          value: http://checkout
+          value: http://checkout.bookverse-prod.svc.cluster.local
         image: ${DOCKER_REGISTRY}/bookverse-web-internal-docker-release-local/web:22-1
         imagePullPolicy: IfNotPresent
         livenessProbe:
