@@ -435,14 +435,21 @@ async function getBuildInfo () {
  * @private
  */
 async function loadBackendVersions (config) {
-  // 📊 Service Configuration: Define all BookVerse backend services
-  const _realVersions = { // eslint-disable-line no-unused-vars
-    'platform-version': '2.1.38',
-    'inventory-version': '2.7.13',
-    'recommendations-version': '4.1.18',
-    'checkout-version': '3.2.15'
+  // 📊 Service Configuration: Current deployment versions from Helm chart
+  const deploymentVersions = {
+    'platform-version': 'Web v1.8.18',
+    'inventory-version': 'Inventory v1.5.14', 
+    'recommendations-version': 'Recommendations v2.7.18',
+    'checkout-version': 'Checkout v2.0.10'
   }
 
+  // 🎯 Direct Version Display: Use actual deployment versions instead of health endpoints
+  for (const [serviceId, version] of Object.entries(deploymentVersions)) {
+    document.getElementById(serviceId).textContent = version
+  }
+
+  // Legacy approach with health endpoints (commented out for reference)
+  /*
   const services = [
     { id: 'platform-version', name: 'Platform', url: config.platformBaseUrl || '', healthPath: '/health' },
     { id: 'inventory-version', name: 'Inventory', url: config.inventoryBaseUrl, healthPath: '/health' },
@@ -450,7 +457,11 @@ async function loadBackendVersions (config) {
     { id: 'checkout-version', name: 'Checkout', url: config.checkoutBaseUrl, healthPath: '/health' }
   ]
 
-  // 🔄 Health Check Loop: Check each service health endpoint
+  return // Early return - versions already set above
+  */
+
+  // 🔄 Legacy Health Check Loop (now disabled)
+  /*
   for (const service of services) {
     try {
       // 🔧 Configuration Validation: Check if service URL is configured
@@ -481,8 +492,6 @@ async function loadBackendVersions (config) {
         if (data.version && data.service) {
           version = `${data.service} v${data.version}`
         } else if (data.version) {
-          version = data.version
-        } else if (data.build_version) {
           version = data.build_version
         } else if (data.app_version) {
           version = data.app_version
@@ -509,4 +518,5 @@ async function loadBackendVersions (config) {
       }
     }
   }
+  */
 }
