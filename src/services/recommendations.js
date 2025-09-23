@@ -120,7 +120,7 @@ import { httpJson } from './http.js'
  * 
  * @since 1.0.0
  */
-export async function getSimilar(bookId, limit = 10) {
+export async function getSimilar (bookId, limit = 10) {
   // 🔧 Query Parameter Construction: Build safe URL parameters for ML API
   const qs = new URLSearchParams({ 
     book_id: bookId, 
@@ -214,7 +214,7 @@ export async function getSimilar(bookId, limit = 10) {
  * 
  * @since 1.0.0
  */
-export async function getTrending(limit = 10) {
+export async function getTrending (limit = 10) {
   // 🔧 Query Parameter Construction: Build safe URL parameters for trending API
   const qs = new URLSearchParams({ 
     limit: String(limit) 
@@ -342,11 +342,11 @@ export async function getTrending(limit = 10) {
  * 
  * @since 1.0.0
  */
-export async function getPersonalized(payload) {
+export async function getPersonalized (payload) {
   return httpJson('recommendations', '/api/v1/recommendations/personalized', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload || {}),
+    body: JSON.stringify(payload || {})
   })
 }
 

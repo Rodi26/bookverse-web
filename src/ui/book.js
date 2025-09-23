@@ -3,7 +3,7 @@ import { addToCart, removeFromCart, isInCart, getCart } from '../store/cart.js'
 import { navigateTo } from '../router.js'
 import { resolveImageUrl } from '../util/imageUrl.js'
 
-export async function renderBook(rootEl, params) {
+export async function renderBook (rootEl, params) {
   const { id } = params
   rootEl.innerHTML = '<main class="container"><h1>Loading...</h1></main>'
   try {
@@ -15,7 +15,7 @@ export async function renderBook(rootEl, params) {
   }
 }
 
-function bind(book) {
+function bind (book) {
   const homeBtn = document.querySelector('#home-btn')
   const cartBtn = document.querySelector('#cart-btn')
   const recsBtn = document.querySelector('#recommendations-btn')
@@ -36,7 +36,7 @@ function bind(book) {
 
       setTimeout(() => {
         const recommendationsBtn = document.querySelector('#recommendations-btn')
-        if (recommendationsBtn) recommendationsBtn.click()
+        if (recommendationsBtn) {recommendationsBtn.click()}
       }, 100)
     }
   }
@@ -55,7 +55,7 @@ function bind(book) {
   }
 }
 
-function updateAddButtonState(bookId) {
+function updateAddButtonState (bookId) {
   const addBtn = document.querySelector('#add')
   if (addBtn) {
     if (isInCart(bookId)) {
@@ -68,7 +68,7 @@ function updateAddButtonState(bookId) {
   }
 }
 
-function updateCartCount() {
+function updateCartCount () {
   const cartBtn = document.querySelector('#cart-btn')
   if (cartBtn) {
     const cart = getCart()
@@ -77,7 +77,7 @@ function updateCartCount() {
   }
 }
 
-function renderRating(rating) {
+function renderRating (rating) {
   const fullStars = Math.floor(rating)
   const hasHalfStar = rating % 1 >= 0.5
   const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0)
@@ -96,7 +96,7 @@ function renderRating(rating) {
   return `<div class="rating">${stars} <span class="muted">(${rating})</span></div>`
 }
 
-function layout(book) {
+function layout (book) {
   const rating = book.rating || 0
   return `
   <main class="container">
@@ -136,6 +136,6 @@ function layout(book) {
   `
 }
 
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]))
+function escapeHtml (s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;' }[c]))
 }

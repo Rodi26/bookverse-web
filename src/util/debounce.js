@@ -132,14 +132,14 @@
  * 
  * @since 1.0.0
  */
-export function debounce(fn, waitMs = 300) {
+export function debounce (fn, waitMs = 300) {
   // 🕒 Timer Management: Track execution timer for cancellation
   let timerId = null
   
   // 🔄 Debounced Function: Return function with controlled execution timing
-  return function debounced(...args) {
+  return function debounced (...args) {
     // ⏹️ Cancel Previous: Clear any pending execution timer
-    if (timerId) clearTimeout(timerId)
+    if (timerId) {clearTimeout(timerId)}
     
     // ⏰ Schedule Execution: Set new timer for delayed function execution
     timerId = setTimeout(() => {

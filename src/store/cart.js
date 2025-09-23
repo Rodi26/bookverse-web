@@ -94,7 +94,7 @@ const KEY = 'bookverse.cart.v1'
  * 
  * @since 1.0.0
  */
-export function getCart() {
+export function getCart () {
   try {
     // 📥 Storage Retrieval: Load cart data from localStorage
     const raw = localStorage.getItem(KEY)
@@ -143,7 +143,7 @@ export function getCart() {
  * 
  * @since 1.0.0
  */
-export function saveCart(cart) {
+export function saveCart (cart) {
   // 💾 Data Persistence: Store cart state in localStorage with JSON serialization
   localStorage.setItem(KEY, JSON.stringify(cart || { items: [] }))
 }
@@ -198,7 +198,7 @@ export function saveCart(cart) {
  * 
  * @since 1.0.0
  */
-export function addToCart(bookId, qty, unitPrice) {
+export function addToCart (bookId, qty, unitPrice) {
   // 🛒 Cart Retrieval: Load current cart state
   const cart = getCart()
   
@@ -259,7 +259,7 @@ export function addToCart(bookId, qty, unitPrice) {
  * 
  * @since 1.0.0
  */
-export function removeFromCart(bookId) {
+export function removeFromCart (bookId) {
   // 🛒 Cart Retrieval: Load current cart state
   const cart = getCart()
   
@@ -302,7 +302,7 @@ export function removeFromCart(bookId) {
  * 
  * @since 1.0.0
  */
-export function clearCart() {
+export function clearCart () {
   // 🧹 Cart Reset: Save empty cart state to clear all items
   saveCart({ items: [] })
 }
@@ -354,7 +354,7 @@ export function clearCart() {
  * 
  * @since 1.0.0
  */
-export function isInCart(bookId) {
+export function isInCart (bookId) {
   // 🛒 Cart Retrieval: Load current cart state
   const cart = getCart()
   

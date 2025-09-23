@@ -15,7 +15,7 @@ vi.mock('oidc-client-ts', () => ({
 
 
 const mockLocation = {
-  origin: 'http:
+  origin: 'http://localhost:3000',
   hash: ''
 }
 
@@ -72,7 +72,7 @@ describe('AuthService', () => {
   describe('initialize', () => {
     it('should initialize with valid config', async () => {
       const config = {
-        authority: 'https:
+        authority: 'https://example.com',
         clientId: 'test-client',
         scope: 'openid profile'
       }
@@ -88,7 +88,7 @@ describe('AuthService', () => {
     })
 
     it('should not reinitialize if already initialized', async () => {
-      const config = { authority: 'https:
+      const config = { authority: 'https://example.com' }
 
       await authService.initialize(config)
       const firstCall = UserManager.mock.calls.length
@@ -99,7 +99,7 @@ describe('AuthService', () => {
     })
 
     it('should load existing user on initialization', async () => {
-      const config = { authority: 'https:
+      const config = { authority: 'https://example.com' }
 
       await authService.initialize(config)
 
@@ -108,7 +108,7 @@ describe('AuthService', () => {
     })
 
     it('should handle user loading error gracefully', async () => {
-      const config = { authority: 'https:
+      const config = { authority: 'https://example.com' }
       mockUserManager.getUser.mockRejectedValue(new Error('Storage error'))
 
       await authService.initialize(config)
@@ -120,7 +120,7 @@ describe('AuthService', () => {
 
   describe('authentication methods', () => {
     beforeEach(async () => {
-      const config = { authority: 'https:
+      const config = { authority: 'https://example.com' }
       await authService.initialize(config)
     })
 
@@ -161,7 +161,7 @@ describe('AuthService', () => {
 
   describe('user state methods', () => {
     beforeEach(async () => {
-      const config = { authority: 'https:
+      const config = { authority: 'https://example.com' }
       await authService.initialize(config)
     })
 
@@ -219,7 +219,7 @@ describe('AuthService', () => {
 
   describe('callback management', () => {
     beforeEach(async () => {
-      const config = { authority: 'https:
+      const config = { authority: 'https://example.com' }
       await authService.initialize(config)
     })
 
@@ -297,7 +297,7 @@ describe('AuthService', () => {
     })
 
     it('should handle login errors', async () => {
-      const config = { authority: 'https:
+      const config = { authority: 'https://example.com' }
       await authService.initialize(config)
 
       mockUserManager.signinRedirect.mockRejectedValue(new Error('Login failed'))
@@ -306,7 +306,7 @@ describe('AuthService', () => {
     })
 
     it('should handle callback errors', async () => {
-      const config = { authority: 'https:
+      const config = { authority: 'https://example.com' }
       await authService.initialize(config)
 
       mockUserManager.signinRedirectCallback.mockRejectedValue(new Error('Callback failed'))
@@ -315,7 +315,7 @@ describe('AuthService', () => {
     })
 
     it('should handle token refresh errors', async () => {
-      const config = { authority: 'https:
+      const config = { authority: 'https://example.com' }
       await authService.initialize(config)
 
       mockUserManager.signinSilent.mockRejectedValue(new Error('Refresh failed'))

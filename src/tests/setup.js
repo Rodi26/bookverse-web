@@ -3,7 +3,7 @@ import { vi } from 'vitest'
 
 Object.defineProperty(global, 'crypto', {
   value: {
-    randomUUID: vi.fn(() => 'test-uuid-' + Math.random()),
+    randomUUID: vi.fn(() => `test-uuid-${  Math.random()}`),
     getRandomValues: vi.fn((array) => {
       for (let i = 0; i < array.length; i++) {
         array[i] = Math.floor(Math.random() * 256)

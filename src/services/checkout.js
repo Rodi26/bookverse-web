@@ -139,7 +139,7 @@ import { httpJson } from './http.js'
  * 
  * @private
  */
-function computeIdempotencyKey(items = []) {
+function computeIdempotencyKey (items = []) {
   // 📊 Item Normalization: Standardize data types and structure
   const norm = items
     .map(i => ({ 
@@ -303,7 +303,7 @@ function computeIdempotencyKey(items = []) {
  * 
  * @since 1.0.0
  */
-export async function createOrder(userId, items) {
+export async function createOrder (userId, items) {
   // 📦 Order Payload: Construct request body with user and item data
   const body = { userId, items }
   
@@ -316,7 +316,7 @@ export async function createOrder(userId, items) {
       'Content-Type': 'application/json', 
       'Idempotency-Key': idem 
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify(body)
   })
 }
 
@@ -437,7 +437,7 @@ export async function createOrder(userId, items) {
  * 
  * @since 1.0.0
  */
-export async function getOrder(orderId) {
+export async function getOrder (orderId) {
   return httpJson('checkout', `/api/v1/orders/${encodeURIComponent(orderId)}`)
 }
 

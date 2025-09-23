@@ -13,7 +13,7 @@ const debugLog = DEBUG ? console.log : () => {}
 
 
 class AuthService {
-  constructor() {
+  constructor () {
     this.userManager = null
     this.user = null
     this.authCallbacks = new Set()
@@ -22,7 +22,7 @@ class AuthService {
   }
 
 
-  async initialize(config) {
+  async initialize (config) {
     if (this.initialized) {
       console.warn('AuthService already initialized')
       return
@@ -61,7 +61,7 @@ class AuthService {
     } catch (error) {
       console.error('❌ AUTHENTICATION ERROR: Failed to load user from storage:', error)
 
-      localStorage.removeItem('oidc.user:' + this.config.authority + ':' + this.config.client_id)
+      localStorage.removeItem(`oidc.user:${  this.config.authority  }:${  this.config.client_id}`)
       throw new Error(`Authentication initialization failed: ${error.message}`)
     }
 
@@ -70,7 +70,7 @@ class AuthService {
   }
 
 
-  async login() {
+  async login () {
     if (!this.userManager) {
       throw new Error('AuthService not initialized')
     }
@@ -85,7 +85,7 @@ class AuthService {
   }
 
 
-  async handleCallback() {
+  async handleCallback () {
     if (!this.userManager) {
       throw new Error('AuthService not initialized')
     }
@@ -103,7 +103,7 @@ class AuthService {
   }
 
 
-  async handleSilentCallback() {
+  async handleSilentCallback () {
     if (!this.userManager) {
       throw new Error('AuthService not initialized')
     }
@@ -118,7 +118,7 @@ class AuthService {
   }
 
 
-  async logout() {
+  async logout () {
     if (!this.userManager) {
       throw new Error('AuthService not initialized')
     }
@@ -133,39 +133,39 @@ class AuthService {
   }
 
 
-  getAccessToken() {
+  getAccessToken () {
     return this.user && !this.user.expired ? this.user.access_token : null
   }
 
 
-  getUser() {
+  getUser () {
     return this.user && !this.user.expired ? this.user : null
   }
 
 
-  isAuthenticated() {
+  isAuthenticated () {
     return !!(this.user && !this.user.expired)
   }
 
 
-  getUserProfile() {
+  getUserProfile () {
     return this.user && !this.user.expired ? this.user.profile : null
   }
 
 
-  onAuthChanged(callback) {
+  onAuthChanged (callback) {
     this.authCallbacks.add(callback)
 
     callback(this.isAuthenticated())
   }
 
 
-  offAuthChanged(callback) {
+  offAuthChanged (callback) {
     this.authCallbacks.delete(callback)
   }
 
 
-  async refreshToken() {
+  async refreshToken () {
     if (!this.userManager) {
       throw new Error('AuthService not initialized')
     }
@@ -184,35 +184,35 @@ class AuthService {
   }
 
 
-  _onUserLoaded(user) {
+  _onUserLoaded (user) {
     debugLog('🔄 User loaded:', user.profile?.email)
     this.user = user
     this._notifyAuthCallbacks(true)
   }
 
-  _onUserUnloaded() {
+  _onUserUnloaded () {
     debugLog('🔄 User unloaded')
     this.user = null
     this._notifyAuthCallbacks(false)
   }
 
-  _onTokenExpiring() {
+  _onTokenExpiring () {
     debugLog('⚠️ Token expiring, attempting renewal...')
   }
 
-  _onTokenExpired() {
+  _onTokenExpired () {
     debugLog('❌ Token expired')
     this.user = null
     this._notifyAuthCallbacks(false)
   }
 
-  _onSilentRenewError(error) {
+  _onSilentRenewError (error) {
     console.error('❌ Silent token renewal failed:', error)
     this._notifyAuthCallbacks(false)
   }
 
 
-  _notifyAuthCallbacks(isAuthenticated) {
+  _notifyAuthCallbacks (isAuthenticated) {
     this.authCallbacks.forEach(callback => {
       try {
         callback(isAuthenticated)

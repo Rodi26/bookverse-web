@@ -95,7 +95,7 @@ import { resolveImageUrl } from '../util/imageUrl.js'
  * 
  * @since 1.0.0
  */
-export async function renderCart(rootEl) {
+export async function renderCart (rootEl) {
   // 🛒 Cart State: Retrieve current cart state and calculate totals
   const cart = getCart()
   const total = cart.items.reduce((s, i) => s + Number(i.unitPrice) * Number(i.qty), 0)
@@ -129,14 +129,14 @@ export async function renderCart(rootEl) {
   bindCart(cart)
 }
 
-function bindEmptyCart() {
+function bindEmptyCart () {
   const backBtn = document.querySelector('#back-btn')
   if (backBtn) {
     backBtn.onclick = () => navigateTo('/')
   }
 }
 
-function bindCart(cart) {
+function bindCart (cart) {
   const backBtn = document.querySelector('#back-btn')
   const buyBtn = document.querySelector('#buy-now')
 
@@ -190,7 +190,7 @@ function bindCart(cart) {
   }
 }
 
-function emptyCartLayout() {
+function emptyCartLayout () {
   return `
   <main class="container">
     <div style="margin-bottom: 20px;">
@@ -208,7 +208,7 @@ function emptyCartLayout() {
   `
 }
 
-function cartLayout(cart, total, bookDetails) {
+function cartLayout (cart, total, bookDetails) {
   return `
   <main class="container">
     <div style="margin-bottom: 20px;">
@@ -253,7 +253,7 @@ function cartLayout(cart, total, bookDetails) {
   `
 }
 
-function cartItemCard(item, book) {
+function cartItemCard (item, book) {
   const lineTotal = Number(item.unitPrice) * Number(item.qty)
   return `
   <div class="card" style="margin-bottom: 16px;">

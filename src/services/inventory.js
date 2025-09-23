@@ -119,7 +119,7 @@ import { httpJson } from './http.js'
  * 
  * @since 1.0.0
  */
-export async function listBooks(page = 1, perPage = 10) {
+export async function listBooks (page = 1, perPage = 10) {
   return httpJson('inventory', `/api/v1/books?page=${page}&per_page=${perPage}`)
 }
 
@@ -206,7 +206,7 @@ export async function listBooks(page = 1, perPage = 10) {
  * 
  * @since 1.0.0
  */
-export async function getBook(bookId) {
+export async function getBook (bookId) {
   return httpJson('inventory', `/api/v1/books/${encodeURIComponent(bookId)}`)
 }
 
@@ -290,7 +290,7 @@ export async function getBook(bookId) {
  * 
  * @since 1.0.0
  */
-export async function listInventory(page = 1, perPage = 10, lowStock = false) {
+export async function listInventory (page = 1, perPage = 10, lowStock = false) {
   // 🔧 Query Parameter Construction: Build safe URL parameters
   const qs = new URLSearchParams({ 
     page: String(page), 
@@ -298,7 +298,7 @@ export async function listInventory(page = 1, perPage = 10, lowStock = false) {
   })
   
   // 📊 Low Stock Filtering: Add filter for inventory management
-  if (lowStock) qs.set('low_stock', 'true')
+  if (lowStock) {qs.set('low_stock', 'true')}
   
   return httpJson('inventory', `/api/v1/inventory?${qs.toString()}`)
 }

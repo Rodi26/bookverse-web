@@ -92,7 +92,7 @@ const routes = []
  * 
  * @since 1.0.0
  */
-export function initRouter(rootEl, map) {
+export function initRouter (rootEl, map) {
   // 🔧 Route Compilation: Convert patterns to compiled route objects with matchers
   for (const [pattern, handler] of Object.entries(map)) {
     routes.push({ ...compile(pattern), handler })
@@ -141,9 +141,9 @@ export function initRouter(rootEl, map) {
  * 
  * @since 1.0.0
  */
-export function navigateTo(path) {
+export function navigateTo (path) {
   // 🧭 Navigation Logic: Update hash only if different to prevent redundant events
-  if (location.hash !== `#${path}`) location.hash = `#${path}`
+  if (location.hash !== `#${path}`) {location.hash = `#${path}`}
 }
 
 /**
@@ -170,7 +170,7 @@ export function navigateTo(path) {
  * 
  * @private
  */
-function parseHash() {
+function parseHash () {
   return location.hash.replace(/^#/, '') || '/'
 }
 
@@ -205,7 +205,7 @@ function parseHash() {
  * 
  * @private
  */
-function renderRoute(rootEl) {
+function renderRoute (rootEl) {
   // 🧭 Path Resolution: Get current path from browser hash
   const path = parseHash()
   
@@ -266,7 +266,7 @@ function renderRoute(rootEl) {
  * 
  * @private
  */
-function compile(pattern) {
+function compile (pattern) {
   // 🔧 Pattern Parsing: Split pattern into components and extract parameters
   const parts = pattern.split('/').filter(Boolean)
   const keys = []
@@ -283,7 +283,7 @@ function compile(pattern) {
   })
   
   // 🎯 Regex Compilation: Create final regex for route matching
-  const regex = new RegExp('^/' + regexParts.join('/') + '$')
+  const regex = new RegExp(`^/${  regexParts.join('/')  }$`)
   
   return {
     pattern,
@@ -296,11 +296,13 @@ function compile(pattern) {
     match: (path) => {
       // 🔍 Pattern Matching: Test path against compiled regex
       const m = path.match(regex)
-      if (!m) return null
+      if (!m) {return null}
       
       // 📋 Parameter Extraction: Build parameters object from capture groups
       const params = {}
-      keys.forEach((k, i) => params[k] = decodeURIComponent(m[i + 1]))
+      keys.forEach((k, i) => {
+        params[k] = decodeURIComponent(m[i + 1])
+      })
       return params
     }
   }

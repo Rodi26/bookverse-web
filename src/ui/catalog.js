@@ -93,7 +93,7 @@ import { resolveImageUrl } from '../util/imageUrl.js'
  * 
  * @since 1.0.0
  */
-export function renderCatalog(rootEl) {
+export function renderCatalog (rootEl) {
   // 🎯 Demo Mode: Simplified authentication for demonstration environment
   console.log('🎯 Rendering catalog in demo mode (no authentication required)')
 
@@ -285,10 +285,10 @@ export function renderCatalog(rootEl) {
         const clearBtn = rootEl.querySelector('#clear-search-btn')
         if (!e.target.value.trim()) {
           state.query = ''
-          if (clearBtn) clearBtn.style.display = 'none'
+          if (clearBtn) {clearBtn.style.display = 'none'}
           performSearch()
         } else {
-          if (clearBtn) clearBtn.style.display = 'inline-block'
+          if (clearBtn) {clearBtn.style.display = 'inline-block'}
         }
       }
     }
@@ -297,7 +297,7 @@ export function renderCatalog(rootEl) {
     const clearSearchBtn = rootEl.querySelector('#clear-search-btn')
     if (clearSearchBtn) {
       clearSearchBtn.onclick = () => {
-        if (searchInput) searchInput.value = ''
+        if (searchInput) {searchInput.value = ''}
         state.query = ''
         clearSearchBtn.style.display = 'none'
         performSearch()
@@ -438,7 +438,7 @@ export function renderCatalog(rootEl) {
   loadAllBooks()
 }
 
-function layout(content, hasMore = false) {
+function layout (content, hasMore = false) {
   return `
   <main class="container">
     <nav class="global-nav">
@@ -517,7 +517,7 @@ function layout(content, hasMore = false) {
  * 
  * @since 1.0.0
  */
-function renderRating(rating) {
+function renderRating (rating) {
   // 🧮 Star Calculation: Determine distribution of star types
   const fullStars = Math.floor(rating)
   const hasHalfStar = rating % 1 >= 0.5
@@ -586,7 +586,7 @@ function renderRating(rating) {
  * 
  * @since 1.0.0
  */
-function card(book) {
+function card (book) {
   // 💰 Price Processing: Ensure numeric price for display
   const price = Number(book.price)
   const rating = book.rating || 0
@@ -628,6 +628,6 @@ function card(book) {
  * 
  * @since 1.0.0
  */
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]))
+function escapeHtml (s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;' }[c]))
 }

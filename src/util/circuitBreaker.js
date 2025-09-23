@@ -169,7 +169,7 @@ export class CircuitBreaker {
    * 
    * @since 1.0.0
    */
-  constructor({ failureThreshold = 5, cooldownMs = 2000 } = {}) {
+  constructor ({ failureThreshold = 5, cooldownMs = 2000 } = {}) {
     // 🎛️ Configuration: Set failure detection and recovery parameters
     this.failureThreshold = failureThreshold  // Failures before opening circuit
     this.cooldownMs = cooldownMs              // Recovery cooldown period
@@ -231,7 +231,7 @@ export class CircuitBreaker {
    * 
    * @since 1.0.0
    */
-  canRequest() {
+  canRequest () {
     if (this.state === 'open') {
       // 🕒 Cooldown Check: Test if enough time has passed for recovery attempt
       if (Date.now() >= this.nextTryAt) {
@@ -287,7 +287,7 @@ export class CircuitBreaker {
    * 
    * @since 1.0.0
    */
-  recordSuccess() {
+  recordSuccess () {
     // 🔄 State Reset: Clear failure history and return to normal operation
     this.failures = 0           // Reset failure counter
     this.state = 'closed'       // Return to normal operation state
@@ -344,7 +344,7 @@ export class CircuitBreaker {
    * 
    * @since 1.0.0
    */
-  recordFailure() {
+  recordFailure () {
     // 📈 Failure Tracking: Increment failure counter
     this.failures += 1
     

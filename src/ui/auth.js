@@ -2,7 +2,7 @@ import authService from '../services/auth.js'
 import { navigateTo } from '../router.js'
 
 
-export function renderLogin() {
+export function renderLogin () {
   return `
     <div class="login-container">
       <div class="login-card">
@@ -31,7 +31,7 @@ export function renderLogin() {
 }
 
 
-export function renderAuthStatus() {
+export function renderAuthStatus () {
   const user = authService.getUserProfile()
 
   if (!user) {
@@ -64,7 +64,7 @@ export function renderAuthStatus() {
 }
 
 
-export function renderCallback() {
+export function renderCallback () {
   return `
     <div class="callback-container">
       <div class="callback-card">
@@ -77,7 +77,7 @@ export function renderCallback() {
 }
 
 
-export function requireAuth() {
+export function requireAuth () {
   if (!authService.isAuthenticated()) {
     navigateTo('/login')
     return false
@@ -86,7 +86,7 @@ export function requireAuth() {
 }
 
 
-export function initAuthHandlers() {
+export function initAuthHandlers () {
 
   document.addEventListener('click', async (e) => {
     if (e.target.id === 'login-btn' || e.target.id === 'auth-login-btn') {
@@ -118,7 +118,7 @@ export function initAuthHandlers() {
 }
 
 
-function updateAuthUI(isAuthenticated) {
+function updateAuthUI (isAuthenticated) {
   const authContainer = document.querySelector('.auth-status')
   if (authContainer) {
     authContainer.outerHTML = renderAuthStatus()
@@ -131,7 +131,7 @@ function updateAuthUI(isAuthenticated) {
 }
 
 
-function showErrorMessage(message) {
+function showErrorMessage (message) {
 
   let toast = document.querySelector('.error-toast')
   if (!toast) {
@@ -150,9 +150,9 @@ function showErrorMessage(message) {
 }
 
 
-export async function handleAuthCallback() {
+export async function handleAuthCallback () {
   try {
-    const _user = await authService.handleCallback()
+    const _user = await authService.handleCallback() // eslint-disable-line no-unused-vars
 
 
 
@@ -168,7 +168,7 @@ export async function handleAuthCallback() {
 }
 
 
-export async function handleSilentCallback() {
+export async function handleSilentCallback () {
   try {
     await authService.handleSilentCallback()
 

@@ -106,7 +106,7 @@ import { listBooks, getBook } from './services/inventory.js'
  * 
  * @since 1.0.0
  */
-async function bootstrap() {
+async function bootstrap () {
   // 🏗️ DOM Validation: Ensure application container exists
   const app = document.getElementById('app')
   if (!app) {

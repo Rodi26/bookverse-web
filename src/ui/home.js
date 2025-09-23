@@ -1,4 +1,4 @@
-export function renderHome(rootEl) {
+export function renderHome (rootEl) {
   const cfg = window.__BOOKVERSE_CONFIG__ || { env: 'DEV' }
   rootEl.innerHTML = `
     <main class="container">

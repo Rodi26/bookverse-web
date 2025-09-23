@@ -108,7 +108,7 @@
  * 
  * @since 1.0.0
  */
-export async function attachTrustPanel() {
+export async function attachTrustPanel () {
   // 🔘 Trust Button Creation: Create floating action button with elegant styling
   const btn = document.createElement('button')
   btn.textContent = 'Release Info'
@@ -128,8 +128,12 @@ export async function attachTrustPanel() {
   `
   
   // ✨ Hover Effects: Add subtle animation for enhanced user experience
-  btn.onmouseenter = () => btn.style.transform = 'translateY(-2px)'
-  btn.onmouseleave = () => btn.style.transform = 'translateY(0)'
+  btn.onmouseenter = () => {
+    btn.style.transform = 'translateY(-2px)'
+  }
+  btn.onmouseleave = () => {
+    btn.style.transform = 'translateY(0)'
+  }
   document.body.appendChild(btn)
 
   // 🖼️ Modal Creation: Create full-screen overlay with centered content panel
@@ -180,9 +184,11 @@ export async function attachTrustPanel() {
   }
   
   // 🚫 Modal Close Handlers: Close modal on button click or backdrop click
-  modal.querySelector('#trust-close').onclick = () => modal.style.display = 'none'
+  modal.querySelector('#trust-close').onclick = () => {
+    modal.style.display = 'none'
+  }
   modal.onclick = (e) => {
-    if (e.target === modal) modal.style.display = 'none'
+    if (e.target === modal) {modal.style.display = 'none'}
   }
 }
 
@@ -237,7 +243,7 @@ export async function attachTrustPanel() {
  * 
  * @private
  */
-function renderEvidence(data) {
+function renderEvidence (data) {
   // 📋 Data Extraction: Extract version with fallback for missing data
   const version = data?.version || 'n/a'
   
@@ -311,7 +317,7 @@ function renderEvidence(data) {
  * 
  * @private
  */
-function renderAppInfo() {
+function renderAppInfo () {
   // 📋 Configuration Access: Read global application configuration
   const config = window.__BOOKVERSE_CONFIG__ || {}
   

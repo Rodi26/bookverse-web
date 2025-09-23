@@ -98,7 +98,7 @@
  * 
  * @since 1.0.0
  */
-export function renderReleaseInfo() {
+export function renderReleaseInfo () {
   return `
     <div id="release-info-modal" class="modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
       <div class="modal-content" style="background: var(--panel); color: var(--text); padding: 32px; border-radius: 12px; max-width: 700px; margin: 0 20px; position: relative; box-shadow: 0 10px 40px rgba(0,0,0,0.15); max-height: 80vh; overflow-y: auto;">
@@ -200,7 +200,7 @@ export function renderReleaseInfo() {
  * 
  * @since 1.0.0
  */
-export function initReleaseInfo() {
+export function initReleaseInfo () {
   // ⏰ Startup Tracking: Record application initialization time for uptime calculations
   window.__BOOKVERSE_STARTUP_TIME__ = Date.now()
 
@@ -221,8 +221,12 @@ export function initReleaseInfo() {
 
   // ✨ Enhanced Interactions: Add hover effects for toggle button
   const toggle = document.getElementById('release-info-toggle')
-  toggle.addEventListener('mouseenter', () => toggle.style.transform = 'scale(1.05)')
-  toggle.addEventListener('mouseleave', () => toggle.style.transform = 'scale(1)')
+  toggle.addEventListener('mouseenter', () => {
+    toggle.style.transform = 'scale(1.05)'
+  })
+  toggle.addEventListener('mouseleave', () => {
+    toggle.style.transform = 'scale(1)'
+  })
 
   // 📊 Initial Load: Trigger version information loading
   loadVersionInfo()
@@ -245,7 +249,7 @@ export function initReleaseInfo() {
  * @returns {void}
  * @private
  */
-function showReleaseInfo() {
+function showReleaseInfo () {
   // 👁️ Modal Display: Show modal with flexbox centering
   document.getElementById('release-info-modal').style.display = 'flex'
   
@@ -270,7 +274,7 @@ function showReleaseInfo() {
  * @returns {void}
  * @private
  */
-function hideReleaseInfo() {
+function hideReleaseInfo () {
   // 🚫 Modal Hide: Remove modal from display
   document.getElementById('release-info-modal').style.display = 'none'
 }
@@ -302,7 +306,7 @@ function hideReleaseInfo() {
  * @returns {Promise<void>} Promise resolving when all information is loaded
  * @private
  */
-async function loadVersionInfo() {
+async function loadVersionInfo () {
   // 📋 Configuration Access: Read global configuration state
   const config = window.__BOOKVERSE_CONFIG__ || {}
 
@@ -365,7 +369,7 @@ async function loadVersionInfo() {
  * 
  * @private
  */
-async function getBuildInfo() {
+async function getBuildInfo () {
   // 📋 Version Extraction: Read application version from meta tags
   const version = document.querySelector('meta[name="app-version"]')?.getAttribute('content') || '2.4.16'
   const image = document.querySelector('meta[name="app-image"]')?.getAttribute('content') || 'bookverse-web:18-1'
@@ -430,9 +434,9 @@ async function getBuildInfo() {
  * 
  * @private
  */
-async function loadBackendVersions(config) {
+async function loadBackendVersions (config) {
   // 📊 Service Configuration: Define all BookVerse backend services
-  const _realVersions = {
+  const _realVersions = { // eslint-disable-line no-unused-vars
     'platform-version': '2.1.38',
     'inventory-version': '2.7.13',
     'recommendations-version': '4.1.18',

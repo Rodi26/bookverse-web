@@ -120,7 +120,7 @@
  * 
  * @since 1.0.0
  */
-export function resolveImageUrl(imageUrl, inventoryBaseUrl) {
+export function resolveImageUrl (imageUrl, inventoryBaseUrl) {
   // 🚫 Null/Empty Handling: Provide placeholder for missing image URLs
   if (!imageUrl) {
     return '/placeholder-book.png'

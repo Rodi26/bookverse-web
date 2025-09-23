@@ -176,7 +176,7 @@ jobs:
       build_started_timestamp: ${{ steps.publish-build-info.outputs.build_started_timestamp }}
       build_number: ${{ steps.set-build-info.outputs.build_number }}
       app_version: ${{ steps.set-app-version.outputs.app_version }}
-      jf_oidc_token: ${{ steps.exchange-oidc.outputs.token }}
+      jf_oidc_token: ${{ steps.extract-token.outputs.oidc_token }}
 
     steps:
       # 📥 Setup: Repository checkout for frontend system source code
@@ -656,7 +656,7 @@ jobs:
           ENC_BUILD_NUMBER=$(printf '%s' "$BUILD_NUMBER" | jq -sRr @uri)
           URL="${{ vars.JFROG_URL }}/artifactory/api/build/${ENC_BUILD_NAME}/${ENC_BUILD_NUMBER}?project=${{ vars.PROJECT_KEY }}"
           echo "GET $URL"
-          curl -sS -H "Authorization: Bearer ${{ steps.exchange-oidc.outputs.token }}" -H "Accept: application/json" "$URL" \
+          curl -sS -H "Authorization: Bearer ${{ steps.extract-promotion-token.outputs.promotion_oidc_token }}" -H "Accept: application/json" "$URL" \
             | jq '.buildInfo.modules // [] | map({id, artifacts: (.artifacts // [] | length)})'
 
       - name: "[Create] Application Version"

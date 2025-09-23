@@ -82,17 +82,17 @@
  * 
  * @private
  */
-function serviceBase(service) {
+function serviceBase (service) {
   // 🔧 Service Validation: Handle missing service parameter
-  if (!service) return ''
+  if (!service) {return ''}
 
   // 📋 Configuration Access: Read service URLs from global configuration
   const cfg = window.__BOOKVERSE_CONFIG__ || {}
   
   // 🎯 Service Mapping: Map service names to configured URLs
-  if (service === 'inventory') return cfg.inventoryBaseUrl || ''
-  if (service === 'recommendations') return cfg.recommendationsBaseUrl || ''
-  if (service === 'checkout') return cfg.checkoutBaseUrl || ''
+  if (service === 'inventory') {return cfg.inventoryBaseUrl || ''}
+  if (service === 'recommendations') {return cfg.recommendationsBaseUrl || ''}
+  if (service === 'checkout') {return cfg.checkoutBaseUrl || ''}
   
   // ❌ Unknown Service: Return empty string for unmapped services
   return ''
@@ -132,16 +132,16 @@ function serviceBase(service) {
  * 
  * @private
  */
-function generateUUID() {
+function generateUUID () {
   // 🔒 Secure Generation: Use crypto API when available
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
     return crypto.randomUUID()
   }
 
   // 🎲 Fallback Generation: Mathematical pseudo-random UUID for compatibility
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
     const r = Math.random() * 16 | 0
-    const v = c == 'x' ? r : (r & 0x3 | 0x8)
+    const v = c === 'x' ? r : (r & 0x3 | 0x8)
     return v.toString(16)
   })
 }
@@ -177,7 +177,7 @@ function generateUUID() {
  * 
  * @private
  */
-function withHeaders(opts = {}) {
+function withHeaders (opts = {}) {
   // 📋 Header Initialization: Create Headers object preserving existing headers
   const headers = new Headers(opts.headers || {})
   
@@ -230,7 +230,7 @@ function withHeaders(opts = {}) {
  * 
  * @private
  */
-function fetchWithTimeout(url, opts = {}, timeoutMs = 2500) {
+function fetchWithTimeout (url, opts = {}, timeoutMs = 2500) {
   // 🚫 Abort Controller: Set up request cancellation mechanism
   const controller = new AbortController()
   
@@ -280,14 +280,14 @@ function fetchWithTimeout(url, opts = {}, timeoutMs = 2500) {
  * 
  * @private
  */
-function retryWithJitter(fn, { retries = 2, baseMs = 200 } = {}) {
+function retryWithJitter (fn, { retries = 2, baseMs = 200 } = {}) {
   return new Promise((resolve, reject) => {
     let attempt = 0
     
     const run = () => {
       fn().then(resolve).catch(err => {
         // 🔄 Retry Logic: Check if retries remaining
-        if (attempt >= retries) return reject(err)
+        if (attempt >= retries) {return reject(err)}
         
         attempt += 1
         
@@ -348,7 +348,7 @@ function retryWithJitter(fn, { retries = 2, baseMs = 200 } = {}) {
  * 
  * @since 1.0.0
  */
-export async function httpRequest(service, path, opts = {}) {
+export async function httpRequest (service, path, opts = {}) {
   // 🔗 URL Construction: Resolve service base URL and construct full URL
   const base = serviceBase(service)
   const url = `${base}${path}`
@@ -360,7 +360,7 @@ export async function httpRequest(service, path, opts = {}) {
   )
   
   // ✅ Status Validation: Check HTTP status and throw for errors
-  if (!res.ok) throw new Error(`http_${res.status}`)
+  if (!res.ok) {throw new Error(`http_${res.status}`)}
   
   return res
 }
@@ -408,7 +408,7 @@ export async function httpRequest(service, path, opts = {}) {
  * 
  * @since 1.0.0
  */
-export async function httpJson(service, path, opts = {}) {
+export async function httpJson (service, path, opts = {}) {
   // 🌐 HTTP Request: Execute request with full resilience
   const res = await httpRequest(service, path, opts)
   
