@@ -336,9 +336,20 @@ describe('HTTP Service Integration', () => {
     global.fetch = mockFetch
 
 
-    global.crypto = {
-      randomUUID: () => 'test-uuid',
-      getRandomValues: (array) => array.fill(1)
+    // Mock crypto safely by defining it if it doesn't exist
+    if (!global.crypto) {
+      Object.defineProperty(global, 'crypto', {
+        value: {
+          randomUUID: () => 'test-uuid',
+          getRandomValues: (array) => array.fill(1)
+        },
+        writable: true,
+        configurable: true
+      })
+    } else {
+      // If crypto exists, mock the methods we need
+      vi.spyOn(global.crypto, 'randomUUID').mockReturnValue('test-uuid')
+      vi.spyOn(global.crypto, 'getRandomValues').mockImplementation((array) => array.fill(1))
     }
   })
 
@@ -347,11 +358,15 @@ describe('HTTP Service Integration', () => {
   })
 
   it('should include Authorization header when authenticated', async () => {
-
+    // Set up authenticated user
     authService.user = {
       access_token: 'test-token',
       expired: false
     }
+
+    // Make authService globally available for HTTP service
+    global.window = global.window || {}
+    global.window.__authService = authService
 
     const { httpRequest } = await import('../services/http.js')
 
@@ -375,8 +390,12 @@ describe('HTTP Service Integration', () => {
   })
 
   it('should not include Authorization header when not authenticated', async () => {
-
+    // Set up non-authenticated state
     authService.user = null
+
+    // Make authService globally available for HTTP service
+    global.window = global.window || {}
+    global.window.__authService = authService
 
     const { httpRequest } = await import('../services/http.js')
 

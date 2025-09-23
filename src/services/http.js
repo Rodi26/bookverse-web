@@ -147,15 +147,16 @@ function generateUUID () {
 }
 
 /**
- * Enhance request options with correlation and tracing headers.
+ * Enhance request options with correlation, tracing, and authentication headers.
  * 
  * This function adds essential headers for request correlation, distributed
- * tracing, and observability to every HTTP request. It implements W3C Trace
- * Context specification for compatibility with modern observability tools.
+ * tracing, observability, and authentication to every HTTP request. It implements 
+ * W3C Trace Context specification and integrates with the BookVerse auth service.
  * 
  * 🎯 Purpose:
  *     - Add request correlation IDs for debugging and troubleshooting
  *     - Implement W3C Trace Context for distributed tracing
+ *     - Include authentication tokens for secure API access
  *     - Enable end-to-end request tracking across microservices
  *     - Support observability and performance monitoring
  *     - Facilitate debugging and error investigation
@@ -163,17 +164,18 @@ function generateUUID () {
  * 🔧 Header Enhancement:
  *     - X-Request-Id: Unique request identifier for correlation
  *     - traceparent: W3C Trace Context for distributed tracing
+ *     - Authorization: Bearer token when user is authenticated
  *     - Preserves existing headers while adding tracking information
  *     - Generates trace and span IDs for observability platforms
  * 
  * @param {Object} [opts={}] - Original request options
  * @param {Headers|Object} [opts.headers] - Existing request headers
- * @returns {Object} Enhanced request options with correlation headers
+ * @returns {Object} Enhanced request options with correlation and auth headers
  * 
  * @example
  * // Basic usage
  * const enhancedOpts = withHeaders({ method: 'POST' });
- * // Result includes X-Request-Id and traceparent headers
+ * // Result includes X-Request-Id, traceparent, and Authorization headers
  * 
  * @private
  */
@@ -188,6 +190,24 @@ function withHeaders (opts = {}) {
   const traceId = generateUUID().replace(/-/g, '').substring(0, 32)  // 32-char hex trace ID
   const spanId = generateUUID().replace(/-/g, '').substring(0, 16)   // 16-char hex span ID
   headers.set('traceparent', `00-${traceId}-${spanId}-01`)          // W3C traceparent format
+
+  // 🔐 Authentication: Add Authorization header when user is authenticated
+  // Note: We'll add auth support by checking for an injected auth service
+  // The auth service should be made available globally or passed as context
+  if (typeof window !== 'undefined' && window.__authService) {
+    try {
+      const authService = window.__authService
+      if (authService && authService.isAuthenticated()) {
+        const user = authService.getUser()
+        if (user && user.access_token) {
+          headers.set('Authorization', `Bearer ${user.access_token}`)
+        }
+      }
+    } catch (error) {
+      // Silently handle auth errors to avoid breaking requests
+      console.warn('Failed to add authentication header:', error)
+    }
+  }
 
   // 🔄 Options Enhancement: Return enhanced options with new headers
   return { ...opts, headers }

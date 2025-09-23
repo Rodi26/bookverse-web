@@ -62,7 +62,8 @@ class AuthService {
       console.error('❌ AUTHENTICATION ERROR: Failed to load user from storage:', error)
 
       localStorage.removeItem(`oidc.user:${  this.config.authority  }:${  this.config.client_id}`)
-      throw new Error(`Authentication initialization failed: ${error.message}`)
+      // Don't throw during initialization - gracefully handle errors and continue
+      this.user = null
     }
 
     this.initialized = true
@@ -156,7 +157,12 @@ class AuthService {
   onAuthChanged (callback) {
     this.authCallbacks.add(callback)
 
-    callback(this.isAuthenticated())
+    // Safely call the callback initially with error handling
+    try {
+      callback(this.isAuthenticated())
+    } catch (error) {
+      console.error('Error in auth callback during registration:', error)
+    }
   }
 
 
