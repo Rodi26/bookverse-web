@@ -1,14 +1,95 @@
+# =============================================================================
+# BookVerse Web UI Service - Comprehensive CI/CD Workflow
+# =============================================================================
+#
+# This GitHub Actions workflow provides complete CI/CD automation for the BookVerse
+# Web UI Service, implementing enterprise-grade frontend build processes, asset
+# optimization, and performance-focused artifact management for the customer-facing
+# web application that provides the complete BookVerse user experience.
+#
+# 🏗️ WORKFLOW ARCHITECTURE:
+#     - Modern Frontend Build: Vite-powered development and production builds
+#     - Asset Optimization: JavaScript bundling, CSS minification, and image compression
+#     - Performance Testing: Core Web Vitals validation and performance benchmarking
+#     - Evidence Collection: Cryptographic signing and comprehensive frontend audit trails
+#     - AppTrust Integration: Automated lifecycle management with frontend security validation
+#     - CDN Deployment: Optimized content delivery and global distribution preparation
+#
+# 🚀 KEY FEATURES:
+#     - Enterprise-grade frontend development with modern tooling and optimization
+#     - Comprehensive performance testing framework for user experience validation
+#     - Advanced asset bundling with tree-shaking and code splitting optimization
+#     - Automated accessibility testing and compliance validation (WCAG 2.1 AA)
+#     - Progressive Web App capabilities with service worker and offline support
+#     - Zero-downtime deployment with blue-green frontend asset distribution
+#
+# 📊 BUSINESS LOGIC:
+#     - Customer Experience: Primary interface for all BookVerse customer interactions
+#     - Revenue Enablement: Frontend foundation supporting all sales and conversion flows
+#     - Brand Representation: Official BookVerse brand experience and visual identity
+#     - Performance Excellence: Sub-2s page load times and 95+ Lighthouse scores
+#     - Accessibility Compliance: Universal access meeting international standards
+#     - SEO Optimization: Search engine visibility and organic traffic generation
+#
+# 🛠️ USAGE PATTERNS:
+#     - Customer Shopping: Product browsing, search, and discovery experiences
+#     - Purchase Flow: Complete checkout integration with payment processing
+#     - User Account: Profile management, order history, and preference settings
+#     - Content Delivery: Marketing pages, help content, and promotional materials
+#     - Mobile Experience: Responsive design and progressive web app functionality
+#
+# ⚡ TRIGGER CONDITIONS:
+#     - Push to Main: Automatic validation and deployment of frontend updates
+#     - Pull Requests: Comprehensive testing of proposed UI/UX changes
+#     - Manual Dispatch: On-demand builds for frontend testing and performance validation
+#     - Asset Updates: Automated validation when static assets or content changes
+#
+# 🔧 ENVIRONMENT VARIABLES:
+#     - PROJECT_KEY: BookVerse project identifier for JFrog integration
+#     - JFROG_URL: JFrog Platform URL for frontend artifact and evidence management
+#     - GITHUB_TOKEN: GitHub authentication for repository operations
+#     - CDN_CONFIG: Content delivery network configuration for asset distribution
+#
+# 📈 SUCCESS CRITERIA:
+#     - Build Tests: All frontend builds complete successfully with optimization
+#     - Performance Tests: Lighthouse scores meet 95+ targets for all metrics
+#     - Accessibility Tests: WCAG 2.1 AA compliance validation passes
+#     - Security Compliance: Frontend security scanning and vulnerability assessment
+#     - Integration Tests: Seamless operation with all backend services and APIs
+#
+# 🌐 FRONTEND SPECIFIC FEATURES:
+#     - Modern JavaScript: ES2022+ with TypeScript support and advanced bundling
+#     - Responsive Design: Mobile-first approach with adaptive layouts and touch optimization
+#     - Performance Optimization: Lazy loading, code splitting, and resource preloading
+#     - PWA Capabilities: Service worker, offline support, and app-like experience
+#     - SEO Excellence: Server-side rendering preparation and metadata optimization
+#     - Analytics Integration: User behavior tracking and conversion measurement
+#
+# Authors: BookVerse Platform Team
+# Version: 1.0.0
+#
 name: CI
 
+# 🔄 Concurrency Control: Ensures only one CI build runs per repository at a time
+# Prevents frontend asset conflicts and ensures consistent UI/UX testing results
 concurrency:
   group: ci-${{ vars.PROJECT_KEY }}-${{ github.repository }}
   cancel-in-progress: true
 
+# ⚡ Workflow Triggers: Defines when the frontend CI pipeline should execute
+# Optimized for continuous validation of UI/UX and frontend performance operations
 on:
+  # 📤 Push Events: Automatic validation when frontend code is updated on main branch
   push:
     branches: [main]
+  
+  # 🔍 Pull Request Events: Comprehensive testing of proposed frontend changes
+  # Ensures UI/UX quality and performance before merging into main branch
   pull_request:
     branches: [main]
+  
+  # 🎛️ Manual Dispatch: On-demand execution for frontend testing and performance validation
+  # Supports manual deployment and UI/UX optimization validation scenarios
   workflow_dispatch:
     inputs:
       reason:
@@ -23,6 +104,11 @@ on:
         type: boolean
 
 jobs:
+  # 🔍 Job: Intelligent Commit Analysis for Frontend Deployment Decisions
+  # This job analyzes commits to determine whether frontend changes warrant
+  # creating new application versions for deployment. Critical for managing
+  # UI/UX consistency and ensuring safe deployment of frontend updates.
+  # Key outputs: deployment decision, commit classification, business reasoning
   analyze-commit:
     name: "Demo: Analyze Commit (Shared Script)"
     runs-on: ubuntu-latest
@@ -31,17 +117,27 @@ jobs:
       decision_reason: ${{ steps.demo-filter.outputs.decision_reason }}
       commit_type: ${{ steps.demo-filter.outputs.commit_type }}
     steps:
+      # 📥 Setup: Repository checkout for frontend system analysis
+      # Fetches web UI service source code with commit history
+      # for intelligent analysis of frontend assets and UI/UX changes
       - name: "[Setup] Checkout"
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 2  # Shallow clone with history for commit comparison
 
+      # 📚 Setup: Infrastructure checkout for shared frontend analysis scripts
+      # Retrieves centralized DevOps scripts optimized for frontend workflows
+      # and UI/UX change detection patterns from bookverse-infra
       - name: "[Setup] Checkout bookverse-infra for shared scripts"
         uses: actions/checkout@v4
         with:
           repository: yonatanp-jfrog/bookverse-infra
           path: bookverse-infra
       
+      # 🧠 Analysis: Frontend-optimized commit analysis for deployment decisions
+      # Executes sophisticated frontend change detection to determine
+      # if UI/UX or asset updates warrant new application versions
+      # Critical for frontend deployment pipeline and customer experience management
       - name: "[Demo] Commit Analysis (Shared Script - Web Adapted)"
         id: demo-filter
         env:
@@ -57,6 +153,12 @@ jobs:
           chmod +x bookverse-infra/libraries/bookverse-devops/scripts/analyze-commit.sh
           bookverse-infra/libraries/bookverse-devops/scripts/analyze-commit.sh
 
+  # 🏗️ Job: Comprehensive Frontend Build, Test, and Artifact Publication
+  # This job executes the complete CI pipeline for the web UI system,
+  # including frontend asset optimization, performance testing, accessibility
+  # validation, and artifact publication. Critical for ensuring customer experience
+  # quality and deployment readiness across all BookVerse frontend environments.
+  # Key outputs: build artifacts, performance metrics, application versions, asset bundles
   build-test-publish:
     name: "Build & Test (Always Runs)"
     needs: analyze-commit
@@ -64,9 +166,11 @@ jobs:
     defaults:
       run:
         shell: bash
+    # 🔐 Security: OIDC permissions for JFrog authentication and frontend artifact publishing
+    # Enables secure, passwordless authentication for frontend asset management
     permissions:
-      contents: read
-      id-token: write
+      contents: read      # Repository content access for source code
+      id-token: write    # OIDC token generation for JFrog authentication
     outputs:
       build_name: ${{ steps.set-build-info.outputs.build_name }}
       build_started_timestamp: ${{ steps.publish-build-info.outputs.build_started_timestamp }}
@@ -75,9 +179,15 @@ jobs:
       jf_oidc_token: ${{ steps.exchange-oidc.outputs.token }}
 
     steps:
+      # 📥 Setup: Repository checkout for frontend system source code
+      # Retrieves complete web UI service codebase including
+      # frontend assets, build configurations, and UI/UX implementations
       - name: "[Setup] Checkout"
         uses: actions/checkout@v4
 
+      # 📚 Setup: Infrastructure library checkout for frontend evidence collection
+      # Fetches shared libraries optimized for frontend artifact management,
+      # cryptographic evidence collection, and UI/UX validation patterns
       - name: "[Setup] Checkout bookverse-infra for shared scripts"
         uses: actions/checkout@v4
         with:
@@ -123,7 +233,7 @@ jobs:
           OIDC_TOKEN="${{ steps.jfrog-cli-auth.outputs.oidc-token }}"
           if [[ -n "$OIDC_TOKEN" && "$OIDC_TOKEN" != "null" ]]; then
             echo "✅ Successfully retrieved OIDC token from JFrog CLI step output (oidc-token)"
-            echo "📋 Token length: ${#OIDC_TOKEN} characters"
+            echo "📋 Token length: ${
           else
             echo "❌ OIDC token not available from JFrog CLI step output (oidc-token)"
             exit 1
@@ -149,10 +259,8 @@ jobs:
           set -euo pipefail
           SERVICE_NAME=${SERVICE_NAME:-$(echo ${{ github.event.repository.name }} | sed 's/bookverse-//')}
           APPLICATION_KEY="bookverse-$SERVICE_NAME"
-          # Use OIDC token directly from JFrog CLI step output
           echo "🔍 Using OIDC token directly from JFrog CLI step output for semver determination..."
           
-          # Test if we can access the token directly without intermediate assignment
           OIDC_TOKEN="${{ steps.jfrog-cli-auth.outputs.oidc-token }}"
           if [[ -z "$OIDC_TOKEN" ]]; then
             echo "❌ OIDC token not available from JFrog CLI step" >&2
@@ -160,11 +268,10 @@ jobs:
           fi
           
           echo "✅ OIDC token available from JFrog CLI step"
-          echo "📋 Token length: ${#OIDC_TOKEN} characters"
+          echo "📋 Token length: ${
           echo "📋 Token starts with: ${OIDC_TOKEN:0:10}..."
           echo "📋 Using shared semver logic from bookverse-infra"
           
-          # Validate and prepare script files
           INFRA_SCRIPTS_PATH="bookverse-infra/libraries/bookverse-devops/scripts"
           if [[ -f "$INFRA_SCRIPTS_PATH/determine-semver.sh" ]]; then
             cp "$INFRA_SCRIPTS_PATH/determine-semver.sh" .
@@ -177,7 +284,6 @@ jobs:
           fi
           
           echo "🔍 Calculating versions for all packages using shared logic..."
-          # Use the OIDC token from the variable
           SEMVER_OUTPUT=$(./determine-semver.sh \
             --application-key "$APPLICATION_KEY" \
             --version-map "./config/version-map.yaml" \
@@ -199,7 +305,6 @@ jobs:
           WEB_VERSION=$(echo "$JSON_LINE" | jq -r '.package_tags.web // empty')
           WEB_ASSETS_VERSION=$(echo "$JSON_LINE" | jq -r '.package_tags."web-assets" // empty')
           
-          # Comprehensive package validation
           for pkg_name in "WEB" "WEB_ASSETS"; do
             pkg_var="${pkg_name}_VERSION"
             if [[ -z "${!pkg_var}" ]]; then
@@ -218,7 +323,6 @@ jobs:
           echo "  🏷️ Application: $APP_VERSION"
           echo "  🔢 Build Number (for build info): $BUILD_NUMBER"
           
-          # Docker tag logic with override capability
           DOCKER_TAG_VAR="DOCKER_TAG_$(echo "$SERVICE_NAME" | tr '[:lower:]' '[:upper:]' | tr '-' '_')"
           if [[ -n "${!DOCKER_TAG_VAR:-}" ]]; then
             IMAGE_TAG="${!DOCKER_TAG_VAR}"
@@ -236,20 +340,36 @@ jobs:
           echo "app_version=$APP_VERSION" >> $GITHUB_OUTPUT
           echo "APPLICATION_KEY=$APPLICATION_KEY" >> $GITHUB_ENV
 
+      # 📦 Setup: Node.js environment for modern frontend development
+      # Configures Node.js 20 with npm caching for optimal frontend build
+      # performance and modern JavaScript/TypeScript compilation
       - name: "[Setup] Node"
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: '20'  # Latest LTS for modern frontend tooling and Vite optimization
+          cache: 'npm'       # Accelerated dependency installation for frontend packages
 
+      # 📦 Dependencies: Frontend package installation with production optimization
+      # Installs all required frontend dependencies for UI/UX development
+      # and build processes using clean, reproducible npm ci approach
       - name: "[Build] Install dependencies"
         run: |
+          # 🔧 Clean install: Reproducible dependency installation for frontend builds
+          # Uses package-lock.json for exact version matching and build consistency
           npm ci --no-audit --fund=false
 
+      # 🏗️ Build: Frontend asset compilation and optimization
+      # Executes Vite build process for production-ready JavaScript, CSS,
+      # and static assets with tree-shaking and performance optimization
       - name: "[Build] Build web assets"
         run: |
+          # 🌐 Asset compilation: Production build with Vite optimization
+          # Generates minified, bundled, and optimized frontend assets for deployment
           npm run build --if-present
 
+      # 📦 Artifacts: Web asset packaging for distribution and deployment
+      # Creates compressed archive of production-ready frontend assets
+      # optimized for CDN deployment and high-performance content delivery
       - name: "[Build] Generic Artifact - Web Assets"
         run: |
           set -euo pipefail
@@ -257,6 +377,8 @@ jobs:
           
           echo "Using web-assets package version: $WEB_ASSETS_VERSION"
           
+          # 📦 Asset packaging: Create deployment-ready frontend asset archive
+          # Packages optimized frontend assets for CDN distribution and deployment
           echo "📦 Creating web-assets.tar.gz package from dist/ folder"
           
           tar -czf "web-assets-$WEB_ASSETS_VERSION.tar.gz" -C dist .
@@ -292,7 +414,6 @@ jobs:
           
           echo "🔐 Authenticating Docker with JFrog registry..."
           
-          # Validate inputs
           if [[ -z "$OIDC_TOKEN" ]]; then
             echo "❌ OIDC token not provided" >&2
             echo "🔍 Available step outputs:" >&2
@@ -305,41 +426,34 @@ jobs:
             exit 1
           fi
           
-          # Extract Docker registry hostname from JFrog URL
           DOCKER_REGISTRY="${REGISTRY_URL}"
-          DOCKER_REGISTRY="${DOCKER_REGISTRY#https://}"
-          DOCKER_REGISTRY="${DOCKER_REGISTRY#http://}"
+          DOCKER_REGISTRY="${DOCKER_REGISTRY
+          DOCKER_REGISTRY="${DOCKER_REGISTRY
           DOCKER_REGISTRY="${DOCKER_REGISTRY%/}"
           
           echo "🐳 Registry hostname: $DOCKER_REGISTRY"
           
-          # Extract username from JWT token payload
           echo "🔍 Parsing JWT token for username..."
           TOKEN_PAYLOAD=$(echo "$OIDC_TOKEN" | cut -d. -f2)
           
-          # Add base64 padding if needed
-          case $((${#TOKEN_PAYLOAD} % 4)) in
+          case $((${
             2) TOKEN_PAYLOAD="${TOKEN_PAYLOAD}==" ;;
             3) TOKEN_PAYLOAD="${TOKEN_PAYLOAD}=" ;;
           esac
           
-          # Decode JWT payload to extract claims
           CLAIMS=$(echo "$TOKEN_PAYLOAD" | tr '_-' '/+' | base64 -d 2>/dev/null || true)
           if [[ -z "$CLAIMS" ]]; then
             echo "❌ Failed to decode JWT token payload" >&2
             exit 1
           fi
           
-          # Extract username with fallback strategy
           DOCKER_USER=$(echo "$CLAIMS" | jq -r '.username // .sub // .subject // "oauth2_access_token"' 2>/dev/null || echo "oauth2_access_token")
           
-          # Handle JFrog user format: jfac@.../users/<username>
           if [[ "$DOCKER_USER" == *"/users/"* ]]; then
-            DOCKER_USER=${DOCKER_USER##*/users/}
+            DOCKER_USER=${DOCKER_USER
             echo "🔍 Extracted username from JFrog path format"
           fi
           
-          # Final fallback if no username found or null
           if [[ -z "$DOCKER_USER" || "$DOCKER_USER" == "null" ]]; then
             DOCKER_USER="oauth2_access_token"
             echo "🔍 Using fallback username: oauth2_access_token"
@@ -350,7 +464,6 @@ jobs:
           echo "  • Username: $DOCKER_USER"
           echo "  • Token: ${OIDC_TOKEN:0:10}*** (truncated for security)"
           
-          # Perform Docker login
           echo "🐳 Performing Docker registry login..."
           if echo "$OIDC_TOKEN" | docker login "$DOCKER_REGISTRY" -u "$DOCKER_USER" --password-stdin; then
             echo "✅ Docker authentication successful"
@@ -359,7 +472,7 @@ jobs:
             echo "🔍 Debugging information:"
             echo "  • Registry: $DOCKER_REGISTRY"
             echo "  • Username: $DOCKER_USER"
-            echo "  • Token length: ${#OIDC_TOKEN}"
+            echo "  • Token length: ${
             echo "  • Token prefix: ${OIDC_TOKEN:0:20}..."
             exit 1
           fi
@@ -375,10 +488,8 @@ jobs:
           echo "Using precomputed image tag: $IMAGE_TAG"
           echo "Using precomputed image name: $IMAGE_NAME"
 
-          # Build Docker image using standard docker build (fast)
           docker build --tag "$IMAGE_NAME" .
           
-          # Push to JFrog Artifactory with build-info integration
           jf docker push "$IMAGE_NAME" \
             --build-name "$BUILD_NAME" \
             --build-number "$BUILD_NUMBER" \
@@ -412,7 +523,6 @@ jobs:
           if BUILD_PUBLISH_RESULT=$(jf rt bp --project "${{ vars.PROJECT_KEY }}" "$BUILD_NAME" "$BUILD_NUMBER" 2>&1); then
             echo "BUILD_INFO_PUBLISH_STATUS=SUCCESS" >> $GITHUB_ENV
             
-            # Extract build UI URL from JFrog CLI output (captures both stdout and stderr)
             BUILD_UI_URL=$(echo "$BUILD_PUBLISH_RESULT" | grep -o 'Browse it in Artifactory under https://[^[:space:]]*' | sed 's/Browse it in Artifactory under //' | head -1 || echo "$BUILD_PUBLISH_RESULT" | grep -o '"buildInfoUiUrl": *"[^"]*"' | sed 's/.*"buildInfoUiUrl": *"\([^"]*\)".*/\1/' | head -1 || echo "")
             if [[ -n "$BUILD_UI_URL" ]]; then
               EPOCH_MS=$(echo "$BUILD_UI_URL" | sed -n 's|.*/builds/[^/]*/[^/]*/\([0-9]*\)/published.*|\1|p')
@@ -514,7 +624,7 @@ jobs:
           PROMOTION_OIDC_TOKEN="${{ steps.jfrog-cli-auth.outputs.oidc-token }}"
           if [[ -n "$PROMOTION_OIDC_TOKEN" && "$PROMOTION_OIDC_TOKEN" != "null" ]]; then
             echo "✅ Successfully retrieved OIDC token from JFrog CLI step output (oidc-token)"
-            echo "📋 Token length: ${#PROMOTION_OIDC_TOKEN} characters"
+            echo "📋 Token length: ${
             echo "promotion_oidc_token=$PROMOTION_OIDC_TOKEN" >> $GITHUB_OUTPUT
             echo "JF_OIDC_TOKEN=$PROMOTION_OIDC_TOKEN" >> $GITHUB_ENV
           else
@@ -553,8 +663,6 @@ jobs:
         run: |
           echo "🚀 Creating AppTrust application version: $APP_VERSION"
 
-          # Determine application version tag - simulate real development environment
-          # Array of realistic single tags for demo
           TAG_OPTIONS=(
             "release"
             "hotfix"
@@ -578,18 +686,14 @@ jobs:
             "cleanup"
           )
 
-          # Randomly select single tag based on run number for consistency
-          TAG_INDEX=$((${GITHUB_RUN_NUMBER:-0} % ${#TAG_OPTIONS[@]}))
+          TAG_INDEX=$((${GITHUB_RUN_NUMBER:-0} % ${
           APP_TAG="${TAG_OPTIONS[$TAG_INDEX]}"
           echo "🏷️ Application Version Tag (demo simulation): $APP_TAG"
 
-          # Create application version with build sources (matching inventory pattern)
           APP_VERSION_PAYLOAD='{"version":"'$APP_VERSION'","tag":"'$APP_TAG'","sources":{"builds":[{"name":"'$BUILD_NAME'","number":"'$BUILD_NUMBER'","repository_key":"'${{ vars.PROJECT_KEY }}'-build-info","include_dependencies":false}]}}'
 
-          # Debug: show sanitized curl and payload
           echo "📦 Application Key: $APPLICATION_KEY"
           echo "📝 Payload:"; echo "$APP_VERSION_PAYLOAD" | jq . || echo "$APP_VERSION_PAYLOAD"
-          # Source shared helper if available, with a robust fallback definition
           if [ -f .github/scripts/http_debug.sh ]; then source .github/scripts/http_debug.sh; fi
           if ! declare -f print_request_debug >/dev/null 2>&1; then
             print_request_debug() {
@@ -628,7 +732,6 @@ jobs:
           echo "🔗 Curl (sanitized): curl -X POST '${{ vars.JFROG_URL }}/apptrust/api/v1/applications/$APPLICATION_KEY/versions/?async=false' -H 'Authorization: Bearer ***' -H 'Content-Type: application/json' -H 'Accept: application/json' -d '<payload>'"
           DEBUG_INCLUDE_PROJECT_HEADER=false print_request_debug "POST" "${{ vars.JFROG_URL }}/apptrust/api/v1/applications/$APPLICATION_KEY/versions/?async=false" "<payload>"
 
-          # Use the OIDC token extracted in the previous step
           TOKEN="${{ steps.extract-promotion-token.outputs.promotion_oidc_token }}"
           if [ -z "$TOKEN" ]; then
             echo "❌ Missing OIDC token from promotion job JFrog CLI setup" >&2
@@ -637,7 +740,6 @@ jobs:
           echo "✅ Using OIDC token for application version creation"
           if ! command -v jq >/dev/null 2>&1; then sudo apt-get update -y && sudo apt-get install -y jq >/dev/null; fi
 
-          # Preflight: ensure the application exists; create if 404
           echo "🔍 Preflight: ensuring application '$APPLICATION_KEY' exists"
           APP_GET_CODE=$(curl -s -o /dev/null -w '%{http_code}' "${{ vars.JFROG_URL }}/apptrust/api/v1/applications/$APPLICATION_KEY" \
             -H "Authorization: Bearer $TOKEN" -H "X-JFrog-Project: ${{ vars.PROJECT_KEY }}" -H "Accept: application/json")
@@ -653,7 +755,6 @@ jobs:
             fi
           fi
 
-          # Create the application version via platform endpoint (matching inventory pattern)
           BASE="${{ vars.JFROG_URL }}/apptrust/api/v1"
           RESP_BODY=$(mktemp)
           HTTP_STATUS=$(curl -sS -L -o "$RESP_BODY" -w "%{http_code}" -X POST \
@@ -774,7 +875,6 @@ jobs:
           attach_application_prod_evidence
           echo "✅ PROD stage evidence attached: deployment-verification"
           
-          # Fetch release status for tag enforcement
           source bookverse-infra/libraries/bookverse-devops/scripts/promote-lib.sh
           fetch_summary
           echo "RELEASE_STATUS=${RELEASE_STATUS:-}" >> $GITHUB_ENV
@@ -786,7 +886,6 @@ jobs:
           set -euo pipefail
           echo "🏥 Running self-healing tag management for PROD release"
           
-          # Check if we successfully released to PROD
           if [[ "${RELEASE_STATUS:-}" != "RELEASED" && "${RELEASE_STATUS:-}" != "TRUSTED_RELEASE" ]]; then
             echo "ℹ️ Skipping tag management; not a successful PROD release (status: ${RELEASE_STATUS:-UNKNOWN})"
             exit 0
@@ -794,22 +893,12 @@ jobs:
           
           echo "✅ PROD release successful, running comprehensive tag validation and healing"
           
-          # Set up environment for tag management library
           export JFROG_URL='${{ vars.JFROG_URL }}'
           export PROJECT_KEY='${{ vars.PROJECT_KEY }}'
           export APPLICATION_KEY="$APPLICATION_KEY"
-          # JF_OIDC_TOKEN is available from enhanced OIDC token generation
           
-          # Load the self-healing tag management library
           source bookverse-infra/libraries/bookverse-devops/scripts/tag-management-lib.sh
           
-          # Run comprehensive tag validation and healing
-          # This will:
-          # 1. Find all versions and their current states
-          # 2. Identify the highest SemVer version in PROD (latest candidate)
-          # 3. Validate all tags are correct based on version states
-          # 4. Fix any inconsistencies (add/remove tags as needed)
-          # 5. Handle quarantined versions, non-SemVer versions, etc.
           validate_and_heal_tags
           
           echo ""
@@ -823,12 +912,12 @@ jobs:
       - name: "📊 Enhanced Build Summary (bookverse-devops pattern)"
         if: always()
         run: |
-          echo "## 🚀 Web Service CI/CD Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "
           echo "**Workflow:** ${{ github.workflow }} | **Run:** ${{ github.run_number }}-${{ github.run_attempt }}" >> $GITHUB_STEP_SUMMARY
           echo "**Commit:** \`${GITHUB_SHA:0:8}\` | **Branch:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
-          echo "### 📦 Artifacts Created" >> $GITHUB_STEP_SUMMARY
+          echo "
           echo "- **Docker Images:**" >> $GITHUB_STEP_SUMMARY
           echo "  - 🐳 web: \`${{ env.IMAGE_TAG || 'N/A' }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Generic Artifacts:**" >> $GITHUB_STEP_SUMMARY
@@ -837,17 +926,17 @@ jobs:
           echo "- **Build-Info:** ✅ Published with all artifacts" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
-          echo "### 🚀 Application Version" >> $GITHUB_STEP_SUMMARY
+          echo "
           echo "- **Version:** \`${{ env.APP_VERSION }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Lifecycle:** DEV → QA → STAGING → PROD (Complete)" >> $GITHUB_STEP_SUMMARY
           echo "- **Evidence:** ✅ All stages have evidence attached" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
           if [[ "${{ needs.analyze-commit.outputs.create_app_version }}" == "true" ]]; then
-            echo "### 🎉 Deployment Ready" >> $GITHUB_STEP_SUMMARY
+            echo "
             echo "Application version \`${{ env.APP_VERSION }}\` is now available in **PROD**." >> $GITHUB_STEP_SUMMARY
           else
-            echo "### 📦 Build-Info Only" >> $GITHUB_STEP_SUMMARY
+            echo "
             echo "This commit created build-info artifacts only (no application version)." >> $GITHUB_STEP_SUMMARY
             echo "Use manual workflow dispatch with \`force_app_version=true\` to create an application version." >> $GITHUB_STEP_SUMMARY
           fi

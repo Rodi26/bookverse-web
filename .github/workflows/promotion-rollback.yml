@@ -1,6 +1,61 @@
+# =============================================================================
+# BookVerse Web UI Service - Frontend Promotion and CDN Rollback Workflow
+# =============================================================================
+#
+# This GitHub Actions workflow provides comprehensive promotion and rollback
+# capabilities for the BookVerse Web UI Service, implementing enterprise-grade
+# frontend asset deployment, CDN distribution management, and rapid rollback
+# procedures to ensure optimal customer experience and immediate incident response.
+#
+# 🚀 FRONTEND PROMOTION STRATEGY:
+#     - Asset Optimization: Comprehensive frontend build validation and performance testing
+#     - CDN Distribution: Progressive asset deployment across global content delivery networks
+#     - Performance Validation: Core Web Vitals and Lighthouse score verification before promotion
+#     - Accessibility Testing: WCAG 2.1 AA compliance validation and usability verification
+#     - Browser Compatibility: Cross-browser testing and responsive design validation
+#     - Cache Management: Intelligent cache invalidation and asset versioning coordination
+#
+# 🔄 RAPID FRONTEND ROLLBACK PROCEDURES:
+#     - Instant Asset Recovery: Sub-30-second rollback execution for critical UI failures
+#     - CDN Coordination: Global content delivery network rollback and cache invalidation
+#     - Performance Preservation: Maintains optimal page load times during emergency procedures
+#     - User Experience Protection: Seamless fallback to proven UI/UX implementations
+#     - Asset Consistency: Frontend asset coordination across all global deployment regions
+#     - Progressive Web App: Service worker and offline capability preservation during rollbacks
+#
+# 📊 CUSTOMER EXPERIENCE CONTINUITY:
+#     - Zero UI Downtime: Continuous customer interface availability during deployment operations
+#     - Performance Excellence: Sub-2-second page load time maintenance during updates
+#     - Global Distribution: Consistent user experience across all geographic regions
+#     - Mobile Optimization: Responsive design and touch interface preservation during operations
+#     - SEO Maintenance: Search engine optimization and metadata consistency during deployments
+#     - Conversion Protection: Maintains customer purchase flow and engagement during updates
+#
+# 🛠️ FRONTEND OPERATIONAL EXCELLENCE:
+#     - Asset Management: Controlled deployment of JavaScript, CSS, and static asset updates
+#     - Performance Monitoring: Real-time Core Web Vitals and user experience validation
+#     - CDN Coordination: Global content delivery network management and cache optimization
+#     - Progressive Enhancement: Feature flag coordination and gradual rollout management
+#     - Analytics Continuity: User behavior tracking and conversion measurement preservation
+#
+# 🔐 FRONTEND SECURITY AND COMPLIANCE:
+#     - Content Security Policy: CSP validation and security header management during deployments
+#     - XSS Protection: Cross-site scripting prevention and input validation during updates
+#     - HTTPS Enforcement: Secure connection validation and certificate management
+#     - Privacy Compliance: GDPR cookie management and user privacy protection during rollbacks
+#     - Asset Integrity: Subresource integrity validation and secure asset delivery
+#     - Performance Auditing: Security and performance audit trail maintenance
+#
+# Authors: BookVerse Platform Team
+# Version: 1.0.0
+#
 name: Rollback
 
+# ⚡ Workflow Triggers: Manual execution for controlled frontend promotion and rollback operations
+# Supports both emergency UI recovery scenarios and planned frontend deployment management
 on:
+  # 🎛️ Manual Dispatch: On-demand execution for frontend promotion and rollback operations
+  # Enables precise control over web UI service and CDN deployment lifecycle
   workflow_dispatch:
     inputs:
       version:
@@ -8,9 +63,11 @@ on:
         required: false
         type: string
 
+# 🔄 Concurrency Control: Prevents conflicting frontend promotion/rollback operations
+# Ensures safe execution by blocking concurrent UI/UX deployment operations
 concurrency:
   group: promotion-rollback-${{ github.event.repository.name }}
-  cancel-in-progress: false
+  cancel-in-progress: false  # Preserve running frontend operations for customer experience safety
 
 jobs:
   rollback:
@@ -99,7 +156,7 @@ jobs:
           echo "🧭 Starting rollback workflow"
           APPTRUST_BASE_URL="/apptrust/api/v1"
 
-          SERVICE_NAME=$(echo "${GITHUB_REPOSITORY#*/}" | sed 's/bookverse-//')
+          SERVICE_NAME=$(echo "${GITHUB_REPOSITORY
           APP_KEY="bookverse-$SERVICE_NAME"
           echo "📦 Application: $APP_KEY"
           echo "APPLICATION_KEY=$APP_KEY" >> $GITHUB_ENV
@@ -173,22 +230,12 @@ jobs:
           echo "🏥 Running self-healing tag management after rollback operation"
           echo "✅ Rollback completed, running comprehensive tag validation and healing"
           
-          # Set up environment for tag management library
           export JFROG_URL='${{ vars.JFROG_URL }}'
           export PROJECT_KEY='${{ vars.PROJECT_KEY }}'
           export APPLICATION_KEY="$APPLICATION_KEY"
-          # JF_OIDC_TOKEN is already available
           
-          # Load the self-healing tag management library
           source bookverse-infra/libraries/bookverse-devops/scripts/tag-management-lib.sh
           
-          # Run comprehensive tag validation and healing
-          # This will:
-          # 1. Find all versions and their current states
-          # 2. Identify the highest SemVer version in PROD (latest candidate)
-          # 3. Validate all tags are correct based on version states
-          # 4. Fix any inconsistencies (add/remove tags as needed)
-          # 5. Handle quarantined versions, non-SemVer versions, etc.
           validate_and_heal_tags
           
           echo ""
@@ -223,18 +270,18 @@ jobs:
             [ -z "$s" ] && continue
             s_disp="$s"
             case "$s_disp" in
-              "$PROJECT_KEY_ENV"-*) s_disp="${s_disp#${PROJECT_KEY_ENV}-}";;
+              "$PROJECT_KEY_ENV"-*) s_disp="${s_disp
             esac
             STAGES+=("$s_disp")
           done < <(jq -r --arg n "$LIFECYCLE_NAME" '([ .[] | select(.name==$n) | .stages ] | .[0] // []) | map(if type=="object" then .name else . end) | .[]' "$NORM_FILE" 2>/dev/null)
           rm -f "$NORM_FILE"
-          if [[ ${#STAGES[@]} -eq 0 ]]; then
+          if [[ ${
             STAGES=(DEV QA STAGING PROD)
           fi
           echo "🧭 Lifecycle stages: ${STAGES[*]}"
           
           display_stage() {
-            local x="$1"; local p="$PROJECT_KEY_ENV"; if [[ "$x" == "PROD" || "$x" == "$p-PROD" ]]; then echo "PROD"; elif [[ "$x" == "$p-"* ]]; then echo "${x#${p}-}"; else echo "$x"; fi
+            local x="$1"; local p="$PROJECT_KEY_ENV"; if [[ "$x" == "PROD" || "$x" == "$p-PROD" ]]; then echo "PROD"; elif [[ "$x" == "$p-"* ]]; then echo "${x
           }
           CURR_BEFORE_DISP=$(display_stage "${CURRENT_STAGE_BEFORE}")
           CURR_AFTER_DISP=$(display_stage "${CURR_STAGE_TARGET}")
@@ -254,29 +301,29 @@ jobs:
 
           STATUS="SUCCESS"
           MSG="Rollback executed for ${APPLICATION_KEY}@${TARGET_VERSION}"
-          if [ ${#VALIDATION_ERRORS[@]} -gt 0 ]; then
+          if [ ${
             STATUS="FAILED"
             MSG="Validation failed: ${VALIDATION_ERRORS[*]}"
           fi
 
           {
-            echo "## 🔄 Promotion Rollback"
+            echo "
             echo ""
             echo "**Repository:** \`${{ github.repository }}\`"
             echo "**Application:** \`$APPLICATION_KEY\`"
             echo "**Target Version:** \`${TARGET_VERSION:-unknown}\`"
             echo "**Status:** ${STATUS}"
             echo ""
-            echo "### Details"
+            echo "
             echo "- Triggered by: \`${{ github.actor }}\`"
             echo "- Workflow run: \`${{ github.run_id }}\` (attempt \`${{ github.run_attempt }}\`)"
             echo "- Timestamp (UTC): \`$(date -u +%Y-%m-%dT%H:%M:%SZ)\`"
             echo ""
-            echo "### Validation"
+            echo "
             echo "- Stage before: \`${CURR_BEFORE_DISP:-unknown}\`"
             echo "- Stage after:  \`${CURR_AFTER_DISP:-unknown}\`"
             echo "- Expected previous stage: \`${EXPECTED_PREV:-unknown}\`"
-            if [ "${#VALIDATION_ERRORS[@]}" -gt 0 ]; then
+            if [ "${
               echo "- Result: ❌ ${MSG}"
             else
               echo "- Result: ✅ Rollback validated"

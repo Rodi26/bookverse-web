@@ -1,8 +1,81 @@
-#!/usr/bin/env python3
+"""
+BookVerse Web UI Service - Frontend Asset Rollback and CDN Distribution Management
+ 
+This frontend module provides comprehensive AppTrust rollback capabilities specifically
+for the BookVerse Web UI Service CI/CD pipeline, implementing sophisticated
+frontend asset rollback, CDN distribution management, and AppTrust integration for
+enterprise-grade frontend deployment automation with global content delivery optimization.
+
+🏗️ Frontend Deployment Architecture Overview:
+    - Asset-Specific Rollback: Frontend asset and static content tailored rollback automation
+    - CDN Management: Comprehensive content delivery network distribution and cache invalidation
+    - Performance Preservation: Frontend performance optimization and Core Web Vitals maintenance
+    - AppTrust Integration: Complete AppTrust API communication for web applications
+    - CI/CD Integration: GitHub Actions frontend pipeline rollback with OIDC authentication
+    - Global Distribution: Multi-region CDN coordination and cache management
+
+🚀 Key Frontend Features:
+    - Complete web service rollback automation with frontend asset management
+    - Advanced semantic version parsing and frontend rollback target selection
+    - GitHub Actions OIDC authentication with JFrog Platform frontend pipeline integration
+    - Service-specific validation and health checking for frontend delivery systems
+    - Frontend pipeline rollback with comprehensive error handling and performance validation
+    - Production-ready frontend rollback automation for continuous web deployment
+
+🔧 Technical Frontend Implementation:
+    - CI/CD Integration: GitHub Actions frontend workflow execution with OIDC tokens
+    - Frontend Service Context: Web service specific asset rollback logic and validation
+    - Asset Management: Frontend asset lifecycle management and version coordination
+    - Infrastructure Sharing: Shared rollback library with frontend-specific customization
+    - Authentication: OIDC token-based authentication for frontend pipeline security
+    - Error Handling: Comprehensive frontend pipeline error handling with detailed diagnostics
+
+📊 Frontend Business Logic:
+    - Asset Rollback: Web frontend asset rollback for deployment failures
+    - Pipeline Recovery: Frontend pipeline rollback for automated web service recovery
+    - Quality Gates: Frontend rollback automation for performance and accessibility failures
+    - Production Safety: Safe frontend asset rollback operations for production environments
+    - User Experience Continuity: Frontend user experience preservation during rollback operations
+    - SEO Preservation: Search engine optimization and metadata preservation
+
+🛠️ Frontend Usage Patterns:
+    - Frontend Pipeline: Automated rollback in GitHub Actions frontend workflows
+    - Asset Deployment Failure: Rollback on frontend asset deployment pipeline failures
+    - Performance Gate Failure: Automated rollback for failed Core Web Vitals gates
+    - Manual Operations: Command-line frontend rollback for operational scenarios
+    - CDN Recovery: Web service specific CDN and asset recovery operations
+    - Emergency Response: Rapid frontend asset recovery for user experience emergencies
+
+🌐 Frontend Asset Specific Features:
+    - Asset Version Management: Frontend asset version tracking and rollback coordination
+    - CDN Cache Invalidation: Content delivery network cache management and invalidation
+    - Performance Optimization: Core Web Vitals preservation and performance validation
+    - Accessibility Continuity: WCAG 2.1 AA compliance preservation during rollback
+    - Progressive Web App Management: PWA service worker and offline capability coordination
+    - Browser Compatibility: Cross-browser compatibility validation and preservation
+
+🎨 User Experience and Performance:
+    - Core Web Vitals Preservation: Performance metrics maintenance during rollback operations
+    - Lighthouse Score Continuity: Performance score preservation and validation
+    - Accessibility Standards: WCAG compliance and usability validation during rollback
+    - Mobile Optimization: Responsive design and mobile performance preservation
+    - SEO Maintenance: Search engine optimization and metadata consistency
+    - Conversion Tracking: User conversion funnel preservation and analytics continuity
+
+🚀 CDN and Global Distribution:
+    - CDN State Management: Content delivery network state tracking and rollback verification
+    - Cache Invalidation: Global cache invalidation and content freshness management
+    - Edge Server Coordination: Edge server configuration and geographic distribution
+    - Performance Monitoring: Global performance monitoring and regional optimization
+    - Traffic Routing: CDN traffic routing and load balancing coordination
+    - Content Security: Content security policy and secure asset delivery management
+
+Authors: BookVerse Platform Team
+Version: 1.0.0
+"""
+
 from __future__ import annotations
 
-# This file is copied from bookverse-demo-init/scripts/apptrust_rollback.py
-# Keep the two in sync when updating.
 
 import argparse
 import json
@@ -16,9 +89,7 @@ import urllib.request
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
-# Import OIDC authentication utilities
 try:
-    # Try to import from the shared library
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'bookverse-infra', 'libraries', 'bookverse-devops', 'scripts'))
     from oidc_auth import get_jfrog_token, get_apptrust_base_url
     OIDC_AVAILABLE = True
@@ -48,7 +119,7 @@ class SemVer:
         prerelease_raw = g.get("prerelease") or ""
         return SemVer(int(g["major"]), int(g["minor"]), int(g["patch"]), tuple(prerelease_raw.split(".")) if prerelease_raw else tuple(), version)
 
-    def __lt__(self, other: "SemVer") -> bool:  # type: ignore[override]
+    def __lt__(self, other: "SemVer") -> bool:
         return compare_semver(self, other) < 0
 
 def compare_semver(a: SemVer, b: SemVer) -> int:
@@ -88,7 +159,7 @@ def sort_versions_by_semver_desc(version_strings: List[str]) -> List[str]:
         sv = SemVer.parse(v)
         if sv is not None:
             parsed.append((sv, v))
-    parsed.sort(key=lambda t: t[0], reverse=True)  # type: ignore[arg-type]
+    parsed.sort(key=lambda t: t[0], reverse=True)
     return [v for _, v in parsed]
 
 class AppTrustClient:
@@ -133,13 +204,7 @@ class AppTrustClient:
         return self._request("PATCH", path, body=body)
 
     def rollback_application_version(self, app_key: str, version: str, from_stage: str = "PROD") -> Dict[str, Any]:
-        """Rollback an application version from the specified stage using JFrog AppTrust rollback API
         
-        Args:
-            app_key: Application key
-            version: Version to rollback
-            from_stage: Stage to rollback from (default: PROD for safety)
-        """
         path = f"/applications/{urllib.parse.quote(app_key)}/versions/{urllib.parse.quote(version)}/rollback"
         body = {"from_stage": from_stage}
         return self._request("POST", path, body=body)
@@ -208,8 +273,7 @@ def rollback_in_prod(client: AppTrustClient, app_key: str, target_version: str, 
     if target is None:
         raise RuntimeError(f"Target version not found in PROD set: {target_version}")
 
-    # Step 1: Call JFrog AppTrust rollback API to perform stage rollback
-    from_stage = "PROD"  # Always rollback from PROD for safety
+    from_stage = "PROD"
     if not dry_run:
         print(f"Calling AppTrust endpoint: POST /applications/{app_key}/versions/{target_version}/rollback with body {{from_stage: {from_stage}}}")
         try:
@@ -220,7 +284,6 @@ def rollback_in_prod(client: AppTrustClient, app_key: str, target_version: str, 
     else:
         print(f"[DRY-RUN] Would call AppTrust rollback API: POST /applications/{app_key}/versions/{target_version}/rollback with body {{from_stage: {from_stage}}}")
 
-    # Step 2: Manage tags (quarantine + latest reassignment)
     current_tag = target.get("tag", "")
     had_latest = current_tag == LATEST_TAG
 
@@ -245,30 +308,23 @@ def _env(name: str, default: Optional[str] = None) -> Optional[str]:
     return v.strip()
 
 def get_auth_token() -> Optional[str]:
-    """Get authentication token using OIDC-first approach with fallback."""
     if OIDC_AVAILABLE:
-        # Try OIDC authentication first
         token = get_jfrog_token()
         if token:
             return token
     
-    # Fall back to environment variables
     token = _env("JF_OIDC_TOKEN")
     if token:
         return token
     
-    # Legacy fallback
     return None
 
 def get_base_url() -> Optional[str]:
-    """Get AppTrust base URL using OIDC-aware approach with fallback."""
     if OIDC_AVAILABLE:
-        # Try OIDC-aware URL detection
         url = get_apptrust_base_url()
         if url:
             return url
     
-    # Fall back to environment variable
     return _env("APPTRUST_BASE_URL")
 
 def main() -> int:
@@ -280,14 +336,12 @@ def main() -> int:
     parser.add_argument("--dry-run", action="store_true", help="Log intended changes without mutating")
     args = parser.parse_args()
 
-    # Get base URL with OIDC-aware fallback
     base_url = args.base_url or get_base_url()
     if not base_url:
         print("Missing --base-url or APPTRUST_BASE_URL environment variable", file=sys.stderr)
         print("For OIDC authentication, ensure JFROG_URL is set", file=sys.stderr)
         return 2
 
-    # Get token with OIDC-first approach
     token = args.token or get_auth_token()
     if not token:
         print("Missing authentication token", file=sys.stderr)

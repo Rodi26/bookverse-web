@@ -1,10 +1,7 @@
 import authService from '../services/auth.js'
 import { navigateTo } from '../router.js'
 
-/**
- * Login Page Component
- * Displays login button and handles OIDC authentication
- */
+
 export function renderLogin() {
   return `
     <div class="login-container">
@@ -33,10 +30,7 @@ export function renderLogin() {
   `
 }
 
-/**
- * Authentication Status Component
- * Shows current user info and logout option
- */
+
 export function renderAuthStatus() {
   const user = authService.getUserProfile()
 
@@ -69,10 +63,7 @@ export function renderAuthStatus() {
   `
 }
 
-/**
- * Callback Page Component
- * Handles OIDC callback processing
- */
+
 export function renderCallback() {
   return `
     <div class="callback-container">
@@ -85,10 +76,7 @@ export function renderCallback() {
   `
 }
 
-/**
- * Authentication Guard
- * Redirects to login if user is not authenticated
- */
+
 export function requireAuth() {
   if (!authService.isAuthenticated()) {
     navigateTo('/login')
@@ -97,11 +85,9 @@ export function requireAuth() {
   return true
 }
 
-/**
- * Initialize authentication event handlers
- */
+
 export function initAuthHandlers() {
-  // Login button handler
+
   document.addEventListener('click', async (e) => {
     if (e.target.id === 'login-btn' || e.target.id === 'auth-login-btn') {
       e.preventDefault()
@@ -113,7 +99,7 @@ export function initAuthHandlers() {
       }
     }
 
-    // Logout button handler
+
     if (e.target.id === 'auth-logout-btn') {
       e.preventDefault()
       try {
@@ -125,32 +111,28 @@ export function initAuthHandlers() {
     }
   })
 
-  // Listen for auth state changes
+
   authService.onAuthChanged((isAuthenticated) => {
     updateAuthUI(isAuthenticated)
   })
 }
 
-/**
- * Update authentication UI based on auth state
- */
+
 function updateAuthUI(isAuthenticated) {
   const authContainer = document.querySelector('.auth-status')
   if (authContainer) {
     authContainer.outerHTML = renderAuthStatus()
   }
 
-  // Redirect to home if logged in on login page
+
   if (isAuthenticated && window.location.hash === '#/login') {
     navigateTo('/')
   }
 }
 
-/**
- * Show error message to user
- */
+
 function showErrorMessage(message) {
-  // Create or update error toast
+
   let toast = document.querySelector('.error-toast')
   if (!toast) {
     toast = document.createElement('div')
@@ -161,21 +143,19 @@ function showErrorMessage(message) {
   toast.textContent = message
   toast.classList.add('show')
 
-  // Auto-hide after 5 seconds
+
   setTimeout(() => {
     toast.classList.remove('show')
   }, 5000)
 }
 
-/**
- * Handle OIDC callback processing
- */
+
 export async function handleAuthCallback() {
   try {
     const _user = await authService.handleCallback()
-    // Debug: Authentication callback successful
 
-    // Redirect to intended page or home
+
+
     const returnUrl = sessionStorage.getItem('returnUrl') || '/'
     sessionStorage.removeItem('returnUrl')
     navigateTo(returnUrl)
@@ -187,16 +167,14 @@ export async function handleAuthCallback() {
   }
 }
 
-/**
- * Handle silent callback for token renewal
- */
+
 export async function handleSilentCallback() {
   try {
     await authService.handleSilentCallback()
-    // Debug: Silent authentication callback successful
+
   } catch (error) {
     console.error('❌ AUTHENTICATION ERROR: Silent authentication callback failed:', error)
-    // Force user to re-authenticate
+
     showErrorMessage('Session expired. Please log in again.')
     await authService.logout()
     navigateTo('/login')

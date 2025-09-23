@@ -1,6 +1,6 @@
 import { UserManager, WebStorageStateStore, Log } from 'oidc-client-ts'
 
-// Conditional debug logging - only enable in development
+
 const DEBUG = import.meta.env?.DEV || window.location.hostname === 'localhost'
 
 if (DEBUG) {
@@ -8,15 +8,10 @@ if (DEBUG) {
   Log.setLevel(Log.INFO)
 }
 
-// Debug logging helper
+
 const debugLog = DEBUG ? console.log : () => {}
 
-/**
- * OIDC Authentication Service for BookVerse Web
- *
- * Provides secure authentication using OIDC Authorization Code Flow with PKCE.
- * Supports automatic token refresh and secure storage.
- */
+
 class AuthService {
   constructor() {
     this.userManager = null
@@ -26,10 +21,7 @@ class AuthService {
     this.initialized = false
   }
 
-  /**
-   * Initialize the OIDC client with configuration
-   * @param {Object} config OIDC configuration
-   */
+
   async initialize(config) {
     if (this.initialized) {
       console.warn('AuthService already initialized')
@@ -52,14 +44,14 @@ class AuthService {
 
     this.userManager = new UserManager(this.config)
 
-    // Set up event handlers
+
     this.userManager.events.addUserLoaded(this._onUserLoaded.bind(this))
     this.userManager.events.addUserUnloaded(this._onUserUnloaded.bind(this))
     this.userManager.events.addAccessTokenExpiring(this._onTokenExpiring.bind(this))
     this.userManager.events.addAccessTokenExpired(this._onTokenExpired.bind(this))
     this.userManager.events.addSilentRenewError(this._onSilentRenewError.bind(this))
 
-    // Load existing user if any
+
     try {
       this.user = await this.userManager.getUser()
       if (this.user && !this.user.expired) {
@@ -68,7 +60,7 @@ class AuthService {
       }
     } catch (error) {
       console.error('❌ AUTHENTICATION ERROR: Failed to load user from storage:', error)
-      // Clear potentially corrupted auth state
+
       localStorage.removeItem('oidc.user:' + this.config.authority + ':' + this.config.client_id)
       throw new Error(`Authentication initialization failed: ${error.message}`)
     }
@@ -77,9 +69,7 @@ class AuthService {
     debugLog('✅ AuthService initialized')
   }
 
-  /**
-   * Start the login process
-   */
+
   async login() {
     if (!this.userManager) {
       throw new Error('AuthService not initialized')
@@ -94,9 +84,7 @@ class AuthService {
     }
   }
 
-  /**
-   * Handle login callback
-   */
+
   async handleCallback() {
     if (!this.userManager) {
       throw new Error('AuthService not initialized')
@@ -114,9 +102,7 @@ class AuthService {
     }
   }
 
-  /**
-   * Handle silent callback for token renewal
-   */
+
   async handleSilentCallback() {
     if (!this.userManager) {
       throw new Error('AuthService not initialized')
@@ -131,9 +117,7 @@ class AuthService {
     }
   }
 
-  /**
-   * Logout the user
-   */
+
   async logout() {
     if (!this.userManager) {
       throw new Error('AuthService not initialized')
@@ -148,59 +132,39 @@ class AuthService {
     }
   }
 
-  /**
-   * Get the current access token
-   * @returns {string|null} The access token or null if not authenticated
-   */
+
   getAccessToken() {
     return this.user && !this.user.expired ? this.user.access_token : null
   }
 
-  /**
-   * Get the current user
-   * @returns {Object|null} The user object or null if not authenticated
-   */
+
   getUser() {
     return this.user && !this.user.expired ? this.user : null
   }
 
-  /**
-   * Check if user is authenticated
-   * @returns {boolean} True if authenticated
-   */
+
   isAuthenticated() {
     return !!(this.user && !this.user.expired)
   }
 
-  /**
-   * Get user profile information
-   * @returns {Object|null} User profile or null if not authenticated
-   */
+
   getUserProfile() {
     return this.user && !this.user.expired ? this.user.profile : null
   }
 
-  /**
-   * Register a callback for authentication state changes
-   * @param {Function} callback Function to call when auth state changes
-   */
+
   onAuthChanged(callback) {
     this.authCallbacks.add(callback)
-    // Call immediately with current state
+
     callback(this.isAuthenticated())
   }
 
-  /**
-   * Unregister an authentication state callback
-   * @param {Function} callback Function to remove
-   */
+
   offAuthChanged(callback) {
     this.authCallbacks.delete(callback)
   }
 
-  /**
-   * Manually refresh the access token
-   */
+
   async refreshToken() {
     if (!this.userManager) {
       throw new Error('AuthService not initialized')
@@ -219,7 +183,7 @@ class AuthService {
     }
   }
 
-  // Event handlers
+
   _onUserLoaded(user) {
     debugLog('🔄 User loaded:', user.profile?.email)
     this.user = user
@@ -247,7 +211,7 @@ class AuthService {
     this._notifyAuthCallbacks(false)
   }
 
-  // Notify all callbacks of auth state change
+
   _notifyAuthCallbacks(isAuthenticated) {
     this.authCallbacks.forEach(callback => {
       try {
@@ -259,7 +223,7 @@ class AuthService {
   }
 }
 
-// Create singleton instance
+
 const authService = new AuthService()
 
 export default authService

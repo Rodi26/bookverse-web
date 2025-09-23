@@ -1,26 +1,108 @@
 {
+  "_comment": "BookVerse Web Application - NPM Package Configuration",
+  "_description": "This package.json defines the complete build toolchain, dependencies, and automation scripts for the BookVerse e-commerce web application. It implements modern JavaScript development practices with Vite build system, comprehensive testing with Vitest, and enterprise-grade code quality tools.",
+  
   "name": "bookverse-web",
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  
+  "_scripts_overview": "Build and development automation scripts implementing modern web development workflow with hot reloading, optimized production builds, comprehensive testing, and code quality enforcement",
   "scripts": {
+    "_dev_comment": "🚀 Development server with HMR (Hot Module Replacement) for instant feedback during development",
     "dev": "vite",
+    
+    "_build_comment": "🏗️ Production build with optimization, minification, and asset processing for deployment",
     "build": "vite build",
+    
+    "_preview_comment": "👁️ Preview production build locally for testing and validation before deployment",
     "preview": "vite preview --port 5173",
+    
+    "_test_comment": "🧪 Unit and integration test execution with Vitest for comprehensive code coverage",
     "test": "vitest",
+    
+    "_test_ui_comment": "🖥️ Interactive test UI for visual test management and debugging",
     "test:ui": "vitest --ui",
+    
+    "_lint_comment": "📋 Code quality analysis with ESLint for consistent coding standards",
     "lint": "eslint src/",
+    
+    "_lint_fix_comment": "🔧 Automatic code formatting and linting error fixes",
     "lint:fix": "eslint src/ --fix"
   },
+  
+  "_dependencies_overview": "Production runtime dependencies required for application functionality in deployed environments",
   "dependencies": {
+    "_oidc_comment": "🔐 OpenID Connect authentication client for secure user authentication and JWT token management",
     "oidc-client-ts": "^3.0.1"
   },
+  
+  "_devDependencies_overview": "Development and build-time dependencies for tooling, testing, and code quality enforcement",
   "devDependencies": {
+    "_eslint_js_comment": "📋 ESLint JavaScript configuration for modern code quality standards",
     "@eslint/js": "^9.36.0",
+    
+    "_vitest_ui_comment": "🖥️ Interactive testing interface for visual test management and debugging",
     "@vitest/ui": "^2.0.0",
+    
+    "_eslint_comment": "📋 ESLint core engine for code quality analysis and style enforcement",
     "eslint": "^9.36.0",
+    
+    "_jsdom_comment": "🌐 DOM implementation for Node.js enabling browser-like testing environment",
     "jsdom": "^25.0.0",
+    
+    "_vite_comment": "⚡ Modern build tool providing lightning-fast development server and optimized production builds",
     "vite": "^5.3.0",
+    
+    "_vitest_comment": "🧪 Vite-native testing framework for unit and integration testing with TypeScript support",
     "vitest": "^2.0.0"
+  },
+  
+  "_build_system_documentation": {
+    "description": "Modern JavaScript build system optimized for development speed and production performance",
+    "build_tool": "Vite 5.x+ with esbuild transformation and Rollup bundling",
+    "module_system": "ES modules with tree-shaking and code splitting",
+    "development_features": [
+      "Hot Module Replacement (HMR) for instant updates",
+      "Source maps for debugging support",
+      "Fast development server with sub-second reload times",
+      "TypeScript and JSX support out of the box"
+    ],
+    "production_optimizations": [
+      "Code minification with esbuild for performance",
+      "Tree shaking for dead code elimination",
+      "Asset optimization and compression",
+      "Cache-friendly file naming with content hashing",
+      "Bundle splitting for optimal loading patterns"
+    ],
+    "testing_strategy": [
+      "Unit testing with Vitest for component and utility testing",
+      "Integration testing with jsdom for DOM-based testing",
+      "Interactive test UI for debugging and development",
+      "Code coverage reporting for quality assurance"
+    ],
+    "code_quality": [
+      "ESLint for consistent coding standards and error detection",
+      "Automatic formatting and linting fixes",
+      "Modern JavaScript best practices enforcement",
+      "Import/export validation and optimization"
+    ]
+  },
+  
+  "_deployment_notes": {
+    "build_output": "Optimized static files generated in dist/ directory",
+    "asset_optimization": "Automatic minification, compression, and cache optimization",
+    "browser_compatibility": "Modern browsers with ES2015+ support",
+    "cdn_ready": "Content-hashed filenames for CDN caching strategies",
+    "container_integration": "Docker-optimized builds with nginx serving"
+  },
+  
+  "_development_workflow": {
+    "local_development": "npm run dev - Start development server with HMR",
+    "production_build": "npm run build - Create optimized production bundle",
+    "preview_testing": "npm run preview - Test production build locally",
+    "unit_testing": "npm run test - Execute comprehensive test suite",
+    "code_quality": "npm run lint - Analyze code quality and standards",
+    "automated_fixes": "npm run lint:fix - Apply automatic formatting and fixes"
   }
 }

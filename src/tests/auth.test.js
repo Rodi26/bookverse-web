@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { UserManager } from 'oidc-client-ts'
 import authService from '../services/auth.js'
 
-// Mock oidc-client-ts
+
 vi.mock('oidc-client-ts', () => ({
   UserManager: vi.fn(),
   WebStorageStateStore: vi.fn(),
@@ -13,9 +13,9 @@ vi.mock('oidc-client-ts', () => ({
   }
 }))
 
-// Mock window and location
+
 const mockLocation = {
-  origin: 'http://localhost:3000',
+  origin: 'http:
   hash: ''
 }
 
@@ -29,13 +29,13 @@ describe('AuthService', () => {
   let mockUser
 
   beforeEach(() => {
-    // Reset the service state
+
     authService.userManager = null
     authService.user = null
     authService.initialized = false
     authService.authCallbacks.clear()
 
-    // Create mock user
+
     mockUser = {
       access_token: 'mock-access-token',
       expired: false,
@@ -45,7 +45,7 @@ describe('AuthService', () => {
       }
     }
 
-    // Create mock UserManager
+
     mockUserManager = {
       events: {
         addUserLoaded: vi.fn(),
@@ -72,7 +72,7 @@ describe('AuthService', () => {
   describe('initialize', () => {
     it('should initialize with valid config', async () => {
       const config = {
-        authority: 'https://auth.example.com',
+        authority: 'https:
         clientId: 'test-client',
         scope: 'openid profile'
       }
@@ -88,7 +88,7 @@ describe('AuthService', () => {
     })
 
     it('should not reinitialize if already initialized', async () => {
-      const config = { authority: 'https://auth.example.com', clientId: 'test' }
+      const config = { authority: 'https:
 
       await authService.initialize(config)
       const firstCall = UserManager.mock.calls.length
@@ -99,7 +99,7 @@ describe('AuthService', () => {
     })
 
     it('should load existing user on initialization', async () => {
-      const config = { authority: 'https://auth.example.com', clientId: 'test' }
+      const config = { authority: 'https:
 
       await authService.initialize(config)
 
@@ -108,7 +108,7 @@ describe('AuthService', () => {
     })
 
     it('should handle user loading error gracefully', async () => {
-      const config = { authority: 'https://auth.example.com', clientId: 'test' }
+      const config = { authority: 'https:
       mockUserManager.getUser.mockRejectedValue(new Error('Storage error'))
 
       await authService.initialize(config)
@@ -120,7 +120,7 @@ describe('AuthService', () => {
 
   describe('authentication methods', () => {
     beforeEach(async () => {
-      const config = { authority: 'https://auth.example.com', clientId: 'test' }
+      const config = { authority: 'https:
       await authService.initialize(config)
     })
 
@@ -161,7 +161,7 @@ describe('AuthService', () => {
 
   describe('user state methods', () => {
     beforeEach(async () => {
-      const config = { authority: 'https://auth.example.com', clientId: 'test' }
+      const config = { authority: 'https:
       await authService.initialize(config)
     })
 
@@ -219,7 +219,7 @@ describe('AuthService', () => {
 
   describe('callback management', () => {
     beforeEach(async () => {
-      const config = { authority: 'https://auth.example.com', clientId: 'test' }
+      const config = { authority: 'https:
       await authService.initialize(config)
     })
 
@@ -228,8 +228,8 @@ describe('AuthService', () => {
 
       authService.onAuthChanged(callback)
 
-      // Should call immediately with current state
-      expect(callback).toHaveBeenCalledWith(true) // mockUser is loaded
+
+      expect(callback).toHaveBeenCalledWith(true)
     })
 
     it('should unregister auth callbacks', () => {
@@ -238,10 +238,10 @@ describe('AuthService', () => {
       authService.onAuthChanged(callback)
       authService.offAuthChanged(callback)
 
-      // Clear previous calls
+
       callback.mockClear()
 
-      // Trigger a state change
+
       authService._notifyAuthCallbacks(false)
 
       expect(callback).not.toHaveBeenCalled()
@@ -254,7 +254,7 @@ describe('AuthService', () => {
       authService.onAuthChanged(callback1)
       authService.onAuthChanged(callback2)
 
-      // Clear initial calls
+
       callback1.mockClear()
       callback2.mockClear()
 
@@ -273,11 +273,11 @@ describe('AuthService', () => {
       authService.onAuthChanged(goodCallback)
       authService.onAuthChanged(badCallback)
 
-      // Clear initial calls
+
       goodCallback.mockClear()
       badCallback.mockClear()
 
-      // Should not throw despite bad callback
+
       expect(() => {
         authService._notifyAuthCallbacks(true)
       }).not.toThrow()
@@ -289,7 +289,7 @@ describe('AuthService', () => {
 
   describe('error handling', () => {
     it('should throw error when not initialized', async () => {
-      // Don't initialize
+
 
       await expect(authService.login()).rejects.toThrow('AuthService not initialized')
       await expect(authService.handleCallback()).rejects.toThrow('AuthService not initialized')
@@ -297,7 +297,7 @@ describe('AuthService', () => {
     })
 
     it('should handle login errors', async () => {
-      const config = { authority: 'https://auth.example.com', clientId: 'test' }
+      const config = { authority: 'https:
       await authService.initialize(config)
 
       mockUserManager.signinRedirect.mockRejectedValue(new Error('Login failed'))
@@ -306,7 +306,7 @@ describe('AuthService', () => {
     })
 
     it('should handle callback errors', async () => {
-      const config = { authority: 'https://auth.example.com', clientId: 'test' }
+      const config = { authority: 'https:
       await authService.initialize(config)
 
       mockUserManager.signinRedirectCallback.mockRejectedValue(new Error('Callback failed'))
@@ -315,7 +315,7 @@ describe('AuthService', () => {
     })
 
     it('should handle token refresh errors', async () => {
-      const config = { authority: 'https://auth.example.com', clientId: 'test' }
+      const config = { authority: 'https:
       await authService.initialize(config)
 
       mockUserManager.signinSilent.mockRejectedValue(new Error('Refresh failed'))
@@ -335,7 +335,7 @@ describe('HTTP Service Integration', () => {
     })
     global.fetch = mockFetch
 
-    // Mock crypto.randomUUID
+
     global.crypto = {
       randomUUID: () => 'test-uuid',
       getRandomValues: (array) => array.fill(1)
@@ -347,7 +347,7 @@ describe('HTTP Service Integration', () => {
   })
 
   it('should include Authorization header when authenticated', async () => {
-    // Set up authenticated state
+
     authService.user = {
       access_token: 'test-token',
       expired: false
@@ -368,14 +368,14 @@ describe('HTTP Service Integration', () => {
       })
     )
 
-    // Check that Authorization header was set
+
     const call = mockFetch.mock.calls[0]
     const headers = call[1].headers
     expect(headers.get('Authorization')).toBe('Bearer test-token')
   })
 
   it('should not include Authorization header when not authenticated', async () => {
-    // Set up unauthenticated state
+
     authService.user = null
 
     const { httpRequest } = await import('../services/http.js')

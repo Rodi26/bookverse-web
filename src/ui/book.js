@@ -33,7 +33,7 @@ function bind(book) {
   if (recsBtn) {
     recsBtn.onclick = () => {
       navigateTo('/')
-      // Trigger recommendations after navigation
+
       setTimeout(() => {
         const recommendationsBtn = document.querySelector('#recommendations-btn')
         if (recommendationsBtn) recommendationsBtn.click()

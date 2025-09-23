@@ -1,6 +1,6 @@
 import { vi } from 'vitest'
 
-// Mock window.crypto
+
 Object.defineProperty(global, 'crypto', {
   value: {
     randomUUID: vi.fn(() => 'test-uuid-' + Math.random()),
@@ -13,7 +13,7 @@ Object.defineProperty(global, 'crypto', {
   }
 })
 
-// Mock localStorage
+
 Object.defineProperty(global, 'localStorage', {
   value: {
     getItem: vi.fn(),
@@ -23,7 +23,7 @@ Object.defineProperty(global, 'localStorage', {
   }
 })
 
-// Mock sessionStorage
+
 Object.defineProperty(global, 'sessionStorage', {
   value: {
     getItem: vi.fn(),
@@ -33,7 +33,7 @@ Object.defineProperty(global, 'sessionStorage', {
   }
 })
 
-// Mock console methods to reduce noise in tests
+
 global.console = {
   ...global.console,
   log: vi.fn(),
