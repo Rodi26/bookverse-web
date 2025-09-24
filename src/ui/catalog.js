@@ -263,7 +263,24 @@ export function renderCatalog (rootEl) {
 
     const homeBtn = rootEl.querySelector('#home-btn')
     if (homeBtn) {
-      homeBtn.onclick = () => navigateTo('/')
+      homeBtn.onclick = () => {
+        // Reset all filters and return to full catalog
+        state.query = ''
+        const searchInput = rootEl.querySelector('#search-input')
+        if (searchInput) searchInput.value = ''
+        const clearBtn = rootEl.querySelector('#clear-search-btn')
+        if (clearBtn) clearBtn.style.display = 'none'
+        const recsBtn = rootEl.querySelector('#recommendations-btn')
+        if (recsBtn && recsBtn.textContent.includes('Show All')) {
+          recsBtn.textContent = '✨ Trending'
+        }
+        filteredBooks = allBooks
+        displayedBooks = []
+        currentBatch = 0
+        loadMoreBooks()
+        updateDisplay()
+        navigateTo('/')
+      }
     }
 
 
@@ -343,7 +360,7 @@ export function renderCatalog (rootEl) {
 
         if (isInCart(id)) {
           removeFromCart(id)
-          btn.textContent = 'Add'
+          btn.textContent = 'Add to cart'
           btn.classList.remove('remove')
         } else {
           addToCart(id, 1, price)
@@ -368,7 +385,7 @@ export function renderCatalog (rootEl) {
         btn.textContent = 'Remove'
         btn.classList.add('remove')
       } else {
-        btn.textContent = 'Add'
+        btn.textContent = 'Add to cart'
         btn.classList.remove('remove')
       }
     })
@@ -442,7 +459,7 @@ function layout (content, hasMore = false) {
   return `
   <main class="container">
     <nav class="global-nav">
-      <div class="nav-brand">📚 BookVerse</div>
+      <a href="#/" class="nav-brand nav-brand-link">📚 BookVerse</a>
       <div class="nav-links">
         <button id="home-btn" class="nav-btn">Home</button>
         <button id="recommendations-btn" class="nav-btn">✨ Trending</button>
@@ -599,7 +616,7 @@ function card (book) {
     ${renderRating(rating)}
     <div class="price">$${price.toFixed(2)}</div>
     <div class="row" style="justify-content:center; margin-top: 12px;">
-      <button class="btn" data-add-id="${book.id}" data-price="${price}" onclick="event.stopPropagation()">Add</button>
+      <button class="btn add-to-cart-btn" data-add-id="${book.id}" data-price="${price}" onclick="event.stopPropagation()">Add to cart</button>
     </div>
   </article>
   `

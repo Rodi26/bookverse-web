@@ -101,7 +101,7 @@ function layout (book) {
   return `
   <main class="container">
     <nav class="global-nav">
-      <div class="nav-brand">📚 BookVerse</div>
+      <a href="#/" class="nav-brand nav-brand-link">📚 BookVerse</a>
       <div class="nav-links">
         <button id="home-btn" class="nav-btn">Home</button>
         <button id="recommendations-btn" class="nav-btn">Recommendations</button>
@@ -121,7 +121,7 @@ function layout (book) {
         <div class="price" style="font-size: 24px; margin: 16px 0;">$${Number(book.price).toFixed(2)}</div>
         <p style="line-height: 1.6; margin: 16px 0; font-size: 1.05em;">${escapeHtml(book.description)}</p>
         <div style="margin: 24px 0;">
-          <button class="btn" id="add" style="padding: 14px 28px; font-size: 16px;">Add to Cart</button>
+          <button class="btn add-to-cart-btn" id="add" style="padding: 14px 28px; font-size: 16px;">Add to Cart</button>
         </div>
         ${book.genres && book.genres.length > 0 ? `
         <div style="margin-top: 20px;">

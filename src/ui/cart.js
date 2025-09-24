@@ -131,17 +131,48 @@ export async function renderCart (rootEl) {
 
 function bindEmptyCart () {
   const backBtn = document.querySelector('#back-btn')
+  const homeBtn = document.querySelector('#home-btn')
+  const cartBtn = document.querySelector('#cart-btn')
+  const recsBtn = document.querySelector('#recommendations-btn')
+  
   if (backBtn) {
     backBtn.onclick = () => navigateTo('/')
+  }
+  
+  if (homeBtn) {
+    homeBtn.onclick = () => navigateTo('/')
+  }
+  
+  if (cartBtn) {
+    cartBtn.onclick = () => navigateTo('/cart')
+  }
+  
+  if (recsBtn) {
+    recsBtn.onclick = () => navigateTo('/')
   }
 }
 
 function bindCart (cart) {
   const backBtn = document.querySelector('#back-btn')
   const buyBtn = document.querySelector('#buy-now')
+  const homeBtn = document.querySelector('#home-btn')
+  const cartBtn = document.querySelector('#cart-btn')
+  const recsBtn = document.querySelector('#recommendations-btn')
 
   if (backBtn) {
     backBtn.onclick = () => navigateTo('/')
+  }
+  
+  if (homeBtn) {
+    homeBtn.onclick = () => navigateTo('/')
+  }
+  
+  if (cartBtn) {
+    cartBtn.onclick = () => navigateTo('/cart')
+  }
+  
+  if (recsBtn) {
+    recsBtn.onclick = () => navigateTo('/')
   }
 
 
@@ -193,6 +224,14 @@ function bindCart (cart) {
 function emptyCartLayout () {
   return `
   <main class="container">
+    <nav class="global-nav">
+      <a href="#/" class="nav-brand nav-brand-link">📚 BookVerse</a>
+      <div class="nav-links">
+        <button id="home-btn" class="nav-btn">Home</button>
+        <button id="recommendations-btn" class="nav-btn">✨ Trending</button>
+        <button id="cart-btn" class="nav-btn cart-btn">Cart</button>
+      </div>
+    </nav>
     <div style="margin-bottom: 20px;">
       <button id="back-btn" class="btn secondary">← Back to Catalog</button>
     </div>
@@ -211,6 +250,14 @@ function emptyCartLayout () {
 function cartLayout (cart, total, bookDetails) {
   return `
   <main class="container">
+    <nav class="global-nav">
+      <a href="#/" class="nav-brand nav-brand-link">📚 BookVerse</a>
+      <div class="nav-links">
+        <button id="home-btn" class="nav-btn">Home</button>
+        <button id="recommendations-btn" class="nav-btn">✨ Trending</button>
+        <button id="cart-btn" class="nav-btn cart-btn">Cart</button>
+      </div>
+    </nav>
     <div style="margin-bottom: 20px;">
       <button id="back-btn" class="btn secondary">← Back to Catalog</button>
     </div>
