@@ -1,114 +1,74 @@
-# BookVerse Web
+# BookVerse Web Frontend
 
-Small, production-like UI for the BookVerse demo. It consumes the microservice
-APIs and is designed to demonstrate end-to-end CI/CD and promotion with
-JFrog AppTrust.
+Demo-ready Vue.js frontend application for the BookVerse platform, showcasing JFrog AppTrust capabilities with static asset deployment patterns.
 
-## Testing Status
-- Testing automatic CI triggers with Docker image + web assets
-- Validating commit filtering, application version creation, and auto-promotion
+## 🎯 Demo Purpose & Patterns
 
-## Local development
+This service demonstrates the **Static Asset Application Pattern** - showcasing how frontend applications with build artifacts, static assets, and CDN deployments can be managed in AppTrust.
 
-```bash
-npm install
-npm run dev
+### 🌐 **Static Asset Application Pattern**
+- **What it demonstrates**: Application versions built from static assets (HTML, CSS, JS bundles) with containerized delivery
+- **AppTrust benefit**: Frontend builds with all assets promoted together ensuring UI consistency across environments (DEV → QA → STAGING → PROD)
+- **Real-world applicability**: Modern SPA applications, static sites, and frontend microservices
+
+This service is **frontend-focused** - it demonstrates how modern web applications can be reliably built and promoted through enterprise pipelines.
+
+## 🏗️ Web Frontend Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                  BookVerse Platform                         │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│                    ┌─────────────────┐                      │
+│                    │   Web Frontend  │                      │
+│                    │                 │                      │
+│                    │ Static Assets + │                      │
+│                    │ Container       │                      │
+│                    │ ┌─────────────┐ │                      │
+│                    │ │ Vue.js SPA  │ │                      │
+│                    │ │    Build    │ │                      │
+│                    │ └─────────────┘ │                      │
+│                    │ ┌─────────────┐ │                      │
+│                    │ │   Nginx     │ │                      │
+│                    │ │  Container  │ │                      │
+│                    │ └─────────────┘ │                      │
+│                    └─────────────────┘                      │
+│                    │       │       │                        │
+│          ┌─────────┘       │       └─────────┐              │
+│          │                 │                 │              │
+│  ┌───────────────┐ ┌───────────────┐ ┌───────────────┐      │
+│  │   Inventory   │ │   Checkout    │ │Recommendations│      │
+│  │    Service    │ │    Service    │ │    Service    │      │
+│  └───────────────┘ └───────────────┘ └───────────────┘      │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+
+AppTrust Promotion Pipeline:
+DEV → QA → STAGING → PROD
+ │     │       │        │
+ └─────┴───────┴────────┘
+   Static Assets + Container
+   Move Together as Version
 ```
 
-The dev server runs with Vite and expects the backend base URLs to be provided
-via environment variables (see Docker section) or defaults from `src/services`.
+## 🔧 JFrog AppTrust Integration
 
-## Build
+This service creates multiple artifacts per application version:
 
-```bash
-npm run build
-```
+1. **Docker Images** - Nginx container serving static assets
+2. **Static Assets** - Built JavaScript, CSS, HTML files
+3. **NPM Packages** - Frontend component libraries
+4. **SBOMs** - Software Bill of Materials for frontend dependencies
+5. **Test Reports** - Unit tests, E2E tests, accessibility testing
+6. **Build Evidence** - Comprehensive frontend build attestations
 
-Artifacts are emitted to `dist/`.
+Each artifact moves together through the promotion pipeline: DEV → QA → STAGING → PROD.
 
-## Docker
+For the non-JFrog evidence plan and gates, see: `../bookverse-demo-init/docs/EVIDENCE_PLAN.md`.
 
-```bash
-# build
-docker build -t bookverse-web:dev .
-# run with runtime config
-docker run -p 8080:8080 \
-  -e BOOKVERSE_ENV=DEV \
-  -e INVENTORY_BASE_URL=http://inventory \
-  -e RECOMMENDATIONS_BASE_URL=http://recommendations \
-  -e CHECKOUT_BASE_URL=http://checkout \
-  bookverse-web:dev
-```
+## 🔄 Workflows
 
-## Configuration
-
-- `BOOKVERSE_ENV`: logical environment label (e.g., DEV/QA/STAGING/PROD)
-- `INVENTORY_BASE_URL`: backend inventory base URL
-- `RECOMMENDATIONS_BASE_URL`: backend recommendations base URL
-- `CHECKOUT_BASE_URL`: backend checkout base URL
-
-### Environment Variable Substitution
-
-The `entrypoint.sh` script performs runtime environment variable substitution in the `config.js` file. This allows the web application to connect to different backend services based on the deployment environment.
-
-**Important**: The heredoc in `entrypoint.sh` must NOT use single quotes (`<<'CFG'`) as this prevents shell variable expansion. Use `<<CFG` instead to enable proper substitution.
-
-### Backend URL Configuration
-
-**Production/Kubernetes**: Use internal service names
-```bash
-INVENTORY_BASE_URL=http://inventory
-RECOMMENDATIONS_BASE_URL=http://recommendations  
-CHECKOUT_BASE_URL=http://checkout
-```
-
-**Local Development**: Use localhost with port-forwarding
-```bash
-INVENTORY_BASE_URL=http://localhost:8001
-RECOMMENDATIONS_BASE_URL=http://localhost:8003
-CHECKOUT_BASE_URL=http://localhost:8002
-```
-
-## CI/CD
-
-- The web workflow builds static assets, uploads an artifacts tarball to a
-  generic repository, builds a Docker image, and publishes build-info.
-- Promotion workflow promotes the application version and attaches evidence.
-
-### Required repository variables
-
-- `PROJECT_KEY`: `bookverse`
-- `DOCKER_REGISTRY`: Artifactory Docker registry hostname
-- `JFROG_URL`: JFrog platform base URL
-
-### Required repository secrets
-
-- `EVIDENCE_PRIVATE_KEY`: Private key PEM for evidence signing (mandatory)
-
-### Mandatory OIDC application binding (.jfrog/config.yml)
-
-This repository must include a committed, non-sensitive `.jfrog/config.yml` declaring the AppTrust application key. This is mandatory for package binding.
-
-- During an OIDC-authenticated CI session, JFrog CLI reads the key so packages uploaded by the workflow are automatically bound to the correct AppTrust application.
-- Contains no secrets and must be versioned. If the key changes, commit the update.
-
-Path: `bookverse-web/.jfrog/config.yml`
-
-Example:
-
-```yaml
-application:
-  key: "bookverse-web"
-```
-
-## Workflows
-
-- [`ci.yml`](.github/workflows/ci.yml) — CI for the web app: build, package static assets, Docker image, publish artifacts/build-info.
-- [`promote.yml`](.github/workflows/promote.yml) — Promote the web application version through stages with evidence.
-- [`promotion-rollback.yml`](.github/workflows/promotion-rollback.yml) — Roll back a promoted web application version (demo utility).
-# TEST 4: Web Service tag management test - Sat Sep 20 22:05:08 IDT 2025
-# TEST 4 DEBUG: Web Service workflow debugging - Sat Sep 20 22:14:43 IDT 2025
-# TEST 4 FINAL: Web Service tag management test - Sat Sep 20 22:16:47 IDT 2025
-# TEST 4 FIX: Web Service OIDC token timing fix - Sat Sep 20 22:20:29 IDT 2025
-# TEST 4 FINAL FIX: Web Service JFrog CLI token fallback - Sat Sep 20 22:26:21 IDT 2025
-# TEST 4 ENV FIX: Web Service explicit env variable - Sat Sep 20 22:31:17 IDT 2025
+- [`ci.yml`](.github/workflows/ci.yml) — CI: frontend tests, asset builds, Docker builds, publish artifacts/build-info, AppTrust version and evidence
+- [`promote.yml`](.github/workflows/promote.yml) — Promote the web app version through stages with evidence
+- [`promotion-rollback.yml`](.github/workflows/promotion-rollback.yml) — Roll back a promoted web application version (demo utility)
