@@ -373,9 +373,6 @@ export async function httpRequest (service, path, opts = {}) {
   const base = serviceBase(service)
   const url = `${base}${path}`
   
-  // Debug: Log the constructed URL
-  console.log(`[HTTP Request] Service: ${service}, Base: "${base}", Path: ${path}, Final URL: ${url}`)
-  
   // 🔄 Resilient Execution: Execute request with retry logic and timeout protection
   const res = await retryWithJitter(
     () => fetchWithTimeout(url, withHeaders(opts)), 
