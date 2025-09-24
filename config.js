@@ -1,7 +1,7 @@
 window.__BOOKVERSE_CONFIG__ = {
   env: "PROD",
   platformBaseUrl: "http:
-  inventoryBaseUrl: "",
+  inventoryBaseUrl: "http://bookverse.demo",
   recommendationsBaseUrl: "", 
   checkoutBaseUrl: "",
   oidc: {
