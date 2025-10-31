@@ -131,7 +131,7 @@ jobs:
       - name: "[Setup] Checkout bookverse-infra for shared scripts"
         uses: actions/checkout@v4
         with:
-          repository: yonatanp-jfrog/bookverse-infra
+          repository: Rodi26/bookverse-infra
           path: bookverse-infra
       
       # 🧠 Analysis: Frontend-optimized commit analysis for deployment decisions
@@ -191,7 +191,7 @@ jobs:
       - name: "[Setup] Checkout bookverse-infra for shared scripts"
         uses: actions/checkout@v4
         with:
-          repository: yonatanp-jfrog/bookverse-infra
+          repository: Rodi26/bookverse-infra
           path: bookverse-infra
 
       - name: "[Info] Trigger Information"
@@ -615,7 +615,7 @@ jobs:
       - name: "[Setup] Checkout bookverse-infra for shared scripts"
         uses: actions/checkout@v4
         with:
-          repository: yonatanp-jfrog/bookverse-infra
+          repository: Rodi26/bookverse-infra
           path: bookverse-infra
 
       - name: "[Setup] JFrog CLI"
