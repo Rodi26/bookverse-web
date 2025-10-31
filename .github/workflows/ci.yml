@@ -790,6 +790,12 @@ jobs:
           fi
           rm -f "$RESP_BODY"
 
+      - name: "[Release Bundle] Create for Application Version"
+        run: |
+          echo "📦 Creating release bundle for application version"
+          source bookverse-infra/libraries/bookverse-devops/scripts/evidence-lib.sh
+          create_release_bundle_for_version
+
       - name: "[Evidence] Application Version Evidence"
         env:
           EVIDENCE_PRIVATE_KEY: ${{ secrets.EVIDENCE_PRIVATE_KEY }}
